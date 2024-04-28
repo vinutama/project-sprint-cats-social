@@ -27,6 +27,6 @@ func StartApp() {
 	// Register BP
 	RegisterBluePrint(app, dbPool)
 
-	err := app.Listen("localhost:8080")
+	err := app.Listen(":8080")
 	log.Fatal(err)
 }

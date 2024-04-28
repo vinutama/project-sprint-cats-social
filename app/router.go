@@ -20,9 +20,9 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 
 	app.Post("/v1/user/register", userController.Register)
 
-	// app.Post("/v1/user/hehe", func(c *fiber.Ctx) error {
-	// 	return c.SendString("APANIH HEHE")
-	// })
+	app.Get("/v1/user/hehe", func(c *fiber.Ctx) error {
+		return c.SendString("APANIH HEHE")
+	})
 
 	//middleware JWT down after this code
 	app.Use(helpers.CheckTokenHeader)
