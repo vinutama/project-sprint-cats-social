@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetToken() fiber.Handler {
+func GetTokenHandler() fiber.Handler {
 	return jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{Key: []byte(cfg.EnvConfigs.JwtSecret)},
 		ContextKey: "userInfo",
@@ -17,7 +17,7 @@ func GetToken() fiber.Handler {
 	})
 }
 
-func CheckToken(ctx *fiber.Ctx) error {
+func CheckTokenHeader(ctx *fiber.Ctx) error {
 	authHeader := ctx.Get("Authorization")
 	if authHeader == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
