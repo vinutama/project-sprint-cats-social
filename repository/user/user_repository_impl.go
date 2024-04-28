@@ -16,7 +16,7 @@ func NewUserRepository() UserRepository {
 
 func (repository *UserRepositoryImpl) Register(ctx context.Context, tx pgx.Tx, user user_entity.User) (user_entity.User, error) {
 	var userId string
-	query := "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)"
+	query := "INSERT INTO users (id, name, email, password) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id"
 	if err := tx.QueryRow(ctx, query, user.Name, user.Email, user.Password).Scan(&userId); err != nil {
 		return user_entity.User{}, err
 	}
