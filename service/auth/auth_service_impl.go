@@ -9,7 +9,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var expDuration = time.Now().Add(time.Minute * 30).Unix()
+// 8 hours
+var expDuration = time.Now().Add(time.Hour * 8).Unix()
 
 type AuthServiceImpl struct {
 }
