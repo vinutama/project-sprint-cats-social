@@ -1,0 +1,28 @@
+version: '3.0'
+
+services:
+  web:
+    build: .
+    container_name: cats-web
+    env_file:
+      - cats-social.env
+    ports:
+      - 8080:8080
+    volumes:
+      - .:/usr/src/app
+    command: air main.go -b 0.0.0.0
+  db:
+    container_name: cats-db
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=cats
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=cats-db
+      - POSTGRES_HOST=cats-db
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-db:/var/lib/postgres/data
+
+volumes:
+  postgres-db:
