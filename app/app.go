@@ -18,6 +18,9 @@ func StartApp() {
 
 	app.Use(logger.New())
 
+	// Register BP
+	RegisterBluePrint(app)
+
 	err := app.Listen("localhost:8000")
 	log.Fatal(err)
 }
