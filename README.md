@@ -19,3 +19,8 @@ JWT_SECRET=
 
 - run `make build-dev`
 - run `make run-dev`
+
+# Stacks
+- Golang >1.21.0
+- Go Fiber
+- Postgres
