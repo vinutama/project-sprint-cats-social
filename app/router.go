@@ -12,6 +12,8 @@ import (
 )
 
 func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
+	//TODO:  add validator Here
+
 	authService := auth_service.NewAuthService()
 
 	userRepository := user_repository.NewUserRepository()
