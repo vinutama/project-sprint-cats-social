@@ -22,6 +22,8 @@ func (repository *UserRepositoryImpl) Register(ctx context.Context, tx pgx.Tx, u
 	}
 
 	user.Id = userId
-	tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return user_entity.User{}, err
+	}
 	return user, nil
 }
