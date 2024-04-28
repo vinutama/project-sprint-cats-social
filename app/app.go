@@ -2,6 +2,7 @@ package app
 
 import (
 	cfg "cats-social/config"
+	"cats-social/database"
 	"log"
 
 	"github.com/goccy/go-json"
@@ -19,11 +20,13 @@ func StartApp() {
 		Prefork:      cfg.Prefork,
 	})
 
+	dbPool := database.GetConnPool()
+	defer dbPool.Close()
+
 	app.Use(logger.New())
-
 	// Register BP
-	RegisterBluePrint(app)
+	RegisterBluePrint(app, dbPool)
 
-	err := app.Listen("localhost:8000")
+	err := app.Listen("localhost:8080")
 	log.Fatal(err)
 }
