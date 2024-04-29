@@ -77,6 +77,10 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 }
 
 func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error) {
+	if err := service.Validator.Struct(req); err != nil {
+		return user_entity.UserLoginResponse{}, exc.BadRequestException(fmt.Sprintf("Bad request: %s", err))
+	}
+
 	tx, err := service.DBPool.Begin(ctx)
 	if err != nil {
 		return user_entity.UserLoginResponse{}, err
