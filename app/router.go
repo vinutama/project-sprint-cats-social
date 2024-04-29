@@ -21,6 +21,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	userController := controller.NewUserController(userService, authService)
 
 	app.Post("/v1/user/register", userController.Register)
+	app.Post("/v1/user/login", userController.Login)
 
 	app.Get("/v1/user/hehe", func(c *fiber.Ctx) error {
 		return c.SendString("APANIH HEHE")

@@ -32,3 +32,17 @@ func (controller *UserController) Register(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 
 }
+
+func (controller *UserController) Login(ctx *fiber.Ctx) error {
+	userReq := new(user_entity.UserLoginRequest)
+	if err := ctx.BodyParser(userReq); err != nil {
+		return err
+	}
+
+	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(resp.Status).JSON(resp)
+}
