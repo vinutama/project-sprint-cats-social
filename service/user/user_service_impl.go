@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserServiceImpl struct {
@@ -59,4 +60,54 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 			AccessToken: token,
 		},
 	}, nil
+}
+
+func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error) {
+	tx, err := service.DBPool.Begin(ctx)
+	if err != nil {
+		return user_entity.UserLoginResponse{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	user := user_entity.User{
+		Email: req.Email,
+	}
+
+	userLogin, err := userRep.NewUserRepository().Login(ctx, tx, user)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return user_entity.UserLoginResponse{
+				Message: "User not found",
+				Status:  404,
+			}, nil
+		}
+
+		return user_entity.UserLoginResponse{}, err
+	}
+
+	if _, err = helpers.ComparePassword(userLogin.Password, req.Password); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return user_entity.UserLoginResponse{
+				Message: "Invalid password",
+				Status:  400,
+			}, nil
+		}
+
+		return user_entity.UserLoginResponse{}, err
+	}
+
+	token, err := authService.NewAuthService().GenerateToken(ctx, userLogin.Id)
+	if err != nil {
+		return user_entity.UserLoginResponse{}, err
+	}
+
+	return user_entity.UserLoginResponse{
+		Message: "User logged successfully",
+		Data: &user_entity.UserData{
+			Email:       userLogin.Email,
+			Name:        userLogin.Name,
+			AccessToken: token,
+		},
+	}, nil
+
 }

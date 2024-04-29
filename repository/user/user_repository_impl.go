@@ -27,3 +27,16 @@ func (repository *UserRepositoryImpl) Register(ctx context.Context, tx pgx.Tx, u
 	}
 	return user, nil
 }
+
+func (repository *UserRepositoryImpl) Login(ctx context.Context, tx pgx.Tx, user user_entity.User) (user_entity.User, error) {
+	query := "SELECT id, name, email, password FROM users WHERE email = $1 LIMIT 1"
+	row := tx.QueryRow(ctx, query, user.Email)
+
+	var loggedInUser user_entity.User
+	err := row.Scan(&loggedInUser.Id, &loggedInUser.Name, &loggedInUser.Email, &loggedInUser.Password)
+	if err != nil {
+		return user_entity.User{}, err
+	}
+
+	return loggedInUser, nil
+}

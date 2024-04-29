@@ -7,4 +7,5 @@ import (
 
 type UserService interface {
 	Register(ctx context.Context, req user_entity.UserRegisterRequest) (user_entity.UserRegisterResponse, error)
+	Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error)
 }
