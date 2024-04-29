@@ -7,7 +7,6 @@ import (
 	user_service "cats-social/service/user"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 type UserController struct {
@@ -43,7 +42,6 @@ func (controller *UserController) Login(ctx *fiber.Ctx) error {
 
 	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
 	if err != nil {
-		log.Info("MASUK SINI GA SICH")
 		return exc.Exception(ctx, err)
 	}
 
