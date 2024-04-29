@@ -65,10 +65,7 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error) {
 	tx, err := service.DBPool.Begin(ctx)
 	if err != nil {
-		return user_entity.UserLoginResponse{
-			Message: err.Error(),
-			Status:  500,
-		}, nil
+		return user_entity.UserLoginResponse{}, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -85,10 +82,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserL
 			}, nil
 		}
 
-		return user_entity.UserLoginResponse{
-			Message: err.Error(),
-			Status:  500,
-		}, nil
+		return user_entity.UserLoginResponse{}, err
 	}
 
 	if _, err = helpers.ComparePassword(userLogin.Password, req.Password); err != nil {
@@ -99,18 +93,12 @@ func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserL
 			}, nil
 		}
 
-		return user_entity.UserLoginResponse{
-			Message: err.Error(),
-			Status:  500,
-		}, nil
+		return user_entity.UserLoginResponse{}, err
 	}
 
 	token, err := authService.NewAuthService().GenerateToken(ctx, user.Id)
 	if err != nil {
-		return user_entity.UserLoginResponse{
-			Message: err.Error(),
-			Status:  500,
-		}, nil
+		return user_entity.UserLoginResponse{}, err
 	}
 
 	return user_entity.UserLoginResponse{

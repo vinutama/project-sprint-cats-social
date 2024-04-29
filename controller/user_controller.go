@@ -41,7 +41,11 @@ func (controller *UserController) Login(ctx *fiber.Ctx) error {
 
 	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
 	if err != nil {
-		return err
+		errorMessage := user_entity.UserLoginResponse{
+			Message: err.Error(),
+		}
+
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorMessage)
 	}
 
 	return ctx.Status(resp.Status).JSON(resp)
