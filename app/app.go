@@ -3,6 +3,7 @@ package app
 import (
 	cfg "cats-social/config"
 	"cats-social/database"
+	"cats-social/script"
 	"log"
 
 	"github.com/goccy/go-json"
@@ -21,6 +22,10 @@ func StartApp() {
 	})
 
 	dbPool := database.GetConnPool()
+	// Temporary helper to initiate tables
+	if err := script.InitiateTables(dbPool); err != nil {
+		log.Fatal("Error when initializing tables:", err)
+	}
 	defer dbPool.Close()
 
 	app.Use(logger.New())

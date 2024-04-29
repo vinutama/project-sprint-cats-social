@@ -1,6 +1,9 @@
 build-dev:
 	docker compose build
 
+restart-dev:
+	docker restart cats-web
+
 run-dev:
 	docker compose up -d
 
@@ -12,3 +15,6 @@ logs-db:
 
 check-db:
 	docker exec -it cats-db psql -U cats -d cats-db
+
+clear-db:
+	docker rm -f -v cats-db
