@@ -9,5 +9,5 @@ import (
 
 type UserRepository interface {
 	Register(ctx context.Context, tx pgx.Tx, req user_entity.User) (user_entity.User, error)
-	// Login(ctx context.Context, tx pgx.Tx, req user_entity.User) (user_entity.User, error)
+	Login(ctx context.Context, tx pgx.Tx, req user_entity.User) (user_entity.User, error)
 }
