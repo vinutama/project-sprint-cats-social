@@ -96,7 +96,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserL
 		return user_entity.UserLoginResponse{}, err
 	}
 
-	token, err := authService.NewAuthService().GenerateToken(ctx, user.Id)
+	token, err := authService.NewAuthService().GenerateToken(ctx, userLogin.Id)
 	if err != nil {
 		return user_entity.UserLoginResponse{}, err
 	}
