@@ -7,17 +7,20 @@ import (
 	auth_service "cats-social/service/auth"
 	user_service "cats-social/service/user"
 
+	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
-	//TODO:  add validator Here
+	validator := validator.New()
+	// register custom validator
+	helpers.RegisterCustomValidator(validator)
 
 	authService := auth_service.NewAuthService()
 
 	userRepository := user_repository.NewUserRepository()
-	userService := user_service.NewUserService(userRepository, dbPool, authService)
+	userService := user_service.NewUserService(userRepository, dbPool, authService, validator)
 	userController := controller.NewUserController(userService, authService)
 
 	app.Post("/v1/user/register", userController.Register)

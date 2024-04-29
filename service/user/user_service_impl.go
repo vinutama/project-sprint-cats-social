@@ -7,8 +7,10 @@ import (
 	userRep "cats-social/repository/user"
 	authService "cats-social/service/auth"
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/go-playground/validator"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,20 +19,27 @@ type UserServiceImpl struct {
 	UserRepository userRep.UserRepository
 	DBPool         *pgxpool.Pool
 	AuthService    authService.AuthService
+	Validator      *validator.Validate
 }
 
-func NewUserService(userRepository userRep.UserRepository, dbPool *pgxpool.Pool, authService authService.AuthService) UserService {
+func NewUserService(userRepository userRep.UserRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) UserService {
 	return &UserServiceImpl{
 		UserRepository: userRepository,
 		DBPool:         dbPool,
 		AuthService:    authService,
+		Validator:      validator,
 	}
 }
 
 func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.UserRegisterRequest) (user_entity.UserRegisterResponse, error) {
+	// validate by rule we defined in _request_entity.go
+	if err := service.Validator.Struct(req); err != nil {
+		return user_entity.UserRegisterResponse{}, exc.BadRequestException(fmt.Sprintf("Bad request: %s", err))
+	}
+
 	tx, err := service.DBPool.Begin(ctx)
 	if err != nil {
-		return user_entity.UserRegisterResponse{}, err
+		return user_entity.UserRegisterResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
 	}
 	defer tx.Rollback(ctx)
 
