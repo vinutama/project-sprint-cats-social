@@ -27,7 +27,6 @@ func StartApp() {
 		log.Fatal("Error when initializing tables:", err)
 	}
 	defer dbPool.Close()
-
 	app.Use(logger.New())
 	// Register BP
 	RegisterBluePrint(app, dbPool)

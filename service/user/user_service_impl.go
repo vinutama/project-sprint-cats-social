@@ -2,10 +2,12 @@ package user_service
 
 import (
 	user_entity "cats-social/entity/user"
+	exc "cats-social/exceptions"
 	helpers "cats-social/helpers"
 	userRep "cats-social/repository/user"
 	authService "cats-social/service/auth"
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -44,6 +46,9 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 	}
 	userRegistered, err := userRep.NewUserRepository().Register(ctx, tx, user)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") {
+			return user_entity.UserRegisterResponse{}, exc.ConflictException("User with this email already registered")
+		}
 		return user_entity.UserRegisterResponse{}, err
 	}
 
@@ -76,10 +81,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserL
 	userLogin, err := userRep.NewUserRepository().Login(ctx, tx, user)
 	if err != nil {
 		if err.Error() == "no rows in result set" {
-			return user_entity.UserLoginResponse{
-				Message: "User not found",
-				Status:  404,
-			}, nil
+			return user_entity.UserLoginResponse{}, exc.NotFoundException("User is not found")
 		}
 
 		return user_entity.UserLoginResponse{}, err
@@ -87,10 +89,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserL
 
 	if _, err = helpers.ComparePassword(userLogin.Password, req.Password); err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
-			return user_entity.UserLoginResponse{
-				Message: "Invalid password",
-				Status:  400,
-			}, nil
+			return user_entity.UserLoginResponse{}, exc.BadRequestException("Invalid password")
 		}
 
 		return user_entity.UserLoginResponse{}, err

@@ -2,10 +2,12 @@ package controller
 
 import (
 	user_entity "cats-social/entity/user"
+	exc "cats-social/exceptions"
 	auth_service "cats-social/service/auth"
 	user_service "cats-social/service/user"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 type UserController struct {
@@ -27,7 +29,7 @@ func (controller *UserController) Register(ctx *fiber.Ctx) error {
 	}
 	resp, err := controller.UserService.Register(ctx.UserContext(), *userReq)
 	if err != nil {
-		return err
+		return exc.Exception(ctx, err)
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 
@@ -41,12 +43,9 @@ func (controller *UserController) Login(ctx *fiber.Ctx) error {
 
 	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
 	if err != nil {
-		errorMessage := user_entity.UserLoginResponse{
-			Message: err.Error(),
-		}
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(errorMessage)
+		log.Info("MASUK SINI GA SICH")
+		return exc.Exception(ctx, err)
 	}
 
-	return ctx.Status(resp.Status).JSON(resp)
+	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
