@@ -101,28 +101,18 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
-	// check cat gender cannot be same
-	if catIssuerSex == catReceiverSex {
-		return exc.BadRequestException("Cat's gender cannot be same")
-	}
-
-	// check cat already matched or not
-	if catIssuerHasMatched {
+	switch {
+	case catIssuerUserId != userId:
+		return exc.UnauthorizedException("You cannot match a cat that you do not own!")
+	case catIssuerUserId == catReceiverUserId:
+		return exc.BadRequestException("Match cannot be made from the same cat's owner!")
+	case catIssuerHasMatched:
 		return exc.BadRequestException("Cat's issuer already matched, match another one!")
-	}
-	if catReceiverHasMatched {
+	case catReceiverHasMatched:
 		return exc.BadRequestException("Cat's receiver already matched, match another one!")
+	case catIssuerSex == catReceiverSex:
+		return exc.BadRequestException("Cat's gender cannot be same")
+	default:
+		return nil
 	}
-
-	// check cat owner
-	if catIssuerUserId != userId {
-		return exc.UnauthorizedException("You cannot match cat that you not own!")
-	}
-
-	// check cat issuer and receiver cannot from the same owner
-	if catIssuerUserId == catReceiverUserId {
-		return exc.BadRequestException("Match cannot be same from the same cat's owner!")
-	}
-
-	return nil
 }
