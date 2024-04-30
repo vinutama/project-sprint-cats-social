@@ -34,3 +34,17 @@ func (controller *CatController) Create(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 }
+
+func (controller *CatController) Search(ctx *fiber.Ctx) error {
+	catQueries := new(cat_entity.CatSearchQueries)
+	if err := ctx.QueryParser(catQueries); err != nil {
+		return err
+	}
+
+	resp, err := controller.CatService.Search(ctx, *catQueries)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}
