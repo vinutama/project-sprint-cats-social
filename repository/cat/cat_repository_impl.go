@@ -28,6 +28,7 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 	)
 	RETURNING id, created_at;`
 	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, strings.Join(cat.ImageURLs, "||"), ownerId).Scan(&catId, &catCreatedAt); err != nil {
+		tx.Rollback(ctx)
 		return cat_entity.Cat{}, err
 	}
 
