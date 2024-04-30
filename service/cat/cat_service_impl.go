@@ -6,7 +6,9 @@ import (
 	catRep "cats-social/repository/cat"
 	authService "cats-social/service/auth"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
@@ -51,7 +53,7 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		Sex:         req.Sex,
 		AgeInMonth:  req.AgeInMonth,
 		Description: req.Description,
-		ImageURLs:   req.ImageURLs,
+		ImageURLs:   strings.Join(req.ImageURLs, "||"),
 	}
 
 	catRegistered, err := catRep.NewCatRepository().Create(userCtx, tx, cat, userId)
@@ -66,7 +68,95 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		Message: "success",
 		Data: &cat_entity.CatCreateDataResponse{
 			Id:        catRegistered.Id,
-			CreatedAt: catRegistered.CreatedAt,
+			CreatedAt: catRegistered.CreatedAt.Format(time.RFC3339),
 		},
+	}, nil
+}
+
+func (service *CatServiceImpl) Search(ctx *fiber.Ctx, queries cat_entity.CatSearchQueries) (cat_entity.CatSearchResponse, error) {
+	if err := service.Validator.Struct(queries); err != nil {
+		return cat_entity.CatSearchResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
+	}
+
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(ctx.UserContext())
+	if err != nil {
+		return cat_entity.CatSearchResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	defer tx.Rollback(ctx.UserContext())
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return cat_entity.CatSearchResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+
+	cat := cat_entity.CatSearch{}
+	if queries.Id != "" {
+		cat.Id = queries.Id
+	}
+	if queries.Race != "" {
+		cat.Race = queries.Race
+	}
+	if queries.Sex != "" {
+		cat.Sex = queries.Sex
+	}
+	if queries.HasMatched != "" {
+		cat.HasMatched = queries.HasMatched
+	}
+	if queries.Owned != "" {
+		cat.Owned = queries.Owned
+		cat.UserId = userId
+	}
+	if queries.AgeInMonth != "" {
+		if strings.Contains(queries.AgeInMonth, ">") || strings.Contains(queries.AgeInMonth, "<") {
+			age, _ := strconv.Atoi(queries.AgeInMonth[1:len(queries.AgeInMonth)])
+
+			cat.AgeCondition = fmt.Sprintf("%c", queries.AgeInMonth[0])
+			cat.AgeInMonth = age
+		} else {
+			cat.AgeCondition = "="
+			age, _ := strconv.Atoi(queries.AgeInMonth)
+			cat.AgeInMonth = age
+		}
+	}
+	if queries.Search != "" {
+		cat.Name = queries.Search
+	}
+	if queries.Limit != "" {
+		cat.Limit, _ = strconv.Atoi(queries.Limit)
+	} else {
+		cat.Limit = 5
+	}
+	if queries.Offset != "" {
+		cat.Offset, _ = strconv.Atoi(queries.Offset)
+	} else {
+		cat.Offset = 0
+	}
+
+	catSearched, err := catRep.NewCatRepository().Search(userCtx, tx, cat)
+	if err != nil {
+		return cat_entity.CatSearchResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+
+	data := []cat_entity.CatSearchDataResponse{}
+	for _, cat := range catSearched {
+		catData := cat_entity.CatSearchDataResponse{
+			Id:          cat.Id,
+			Name:        cat.Name,
+			Race:        cat.Race,
+			Sex:         cat.Sex,
+			AgeInMonth:  cat.AgeInMonth,
+			ImageURLs:   strings.Split(cat.ImageURLs, "||"),
+			Description: cat.Description,
+			HasMatched:  cat.HasMatched,
+			CreatedAt:   cat.CreatedAt.Format(time.RFC3339),
+		}
+
+		data = append(data, catData)
+	}
+
+	return cat_entity.CatSearchResponse{
+		Messagge: "success",
+		Data:     &data,
 	}, nil
 }
