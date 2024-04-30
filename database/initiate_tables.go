@@ -18,6 +18,22 @@ func InitiateTables(dbPool *pgxpool.Pool) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         `,
+		`
+		CREATE TABLE IF NOT EXISTS cats (
+			id VARCHAR(100) NOT NULL PRIMARY KEY,
+			name VARCHAR(50) NOT NULL,
+			race VARCHAR(100) NOT NULL,
+			sex VARCHAR(10) NOT NULL,
+			age_in_month INT NOT NULL,
+			user_id VARCHAR(100) NOT NULL,
+			description VARCHAR(255) NOT NULL,
+			image_urls TEXT NOT NULL,
+			has_matched BOOL NOT NULL DEFAULT FALSE,
+			is_deleted BOOL NOT NULL DEFAULT FALSE,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)
+		`,
 		// Add more table creation queries here if needed
 	}
 
