@@ -20,7 +20,7 @@ type CatServiceImpl struct {
 	Validator     *validator.Validate
 }
 
-func NewUserService(catRepository catRep.CatRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) CatService {
+func NewCatService(catRepository catRep.CatRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) CatService {
 	return &CatServiceImpl{
 		CatRepository: catRepository,
 		DBPool:        dbPool,

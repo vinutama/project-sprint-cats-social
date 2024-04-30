@@ -26,7 +26,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	userController := controller.NewUserController(userService, authService)
 
 	catRepository := cat_repository.NewCatRepository()
-	catService := cat_service.NewUserService(catRepository, dbPool, authService, validator)
+	catService := cat_service.NewCatService(catRepository, dbPool, authService, validator)
 	catController := controller.NewCatController(catService, authService)
 
 	// Users API
