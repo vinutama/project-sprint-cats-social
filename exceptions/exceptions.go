@@ -30,3 +30,7 @@ func BadRequestException(message string) error {
 func InternalServerException(message string) error {
 	return fiber.NewError(fiber.StatusInternalServerError, message)
 }
+
+func UnauthorizedException(message string) error {
+	return fiber.NewError(fiber.StatusUnauthorized, message)
+}
