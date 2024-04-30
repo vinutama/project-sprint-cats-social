@@ -101,10 +101,12 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
+	// check cat gender cannot be same
 	if catIssuerSex == catReceiverSex {
 		return exc.BadRequestException("Cat's gender cannot be same")
 	}
 
+	// check cat already matched or not
 	if catIssuerHasMatched {
 		return exc.BadRequestException("Cat's issuer already matched, match another one!")
 	}
@@ -112,10 +114,12 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 		return exc.BadRequestException("Cat's receiver already matched, match another one!")
 	}
 
+	// check cat owner
 	if catIssuerUserId != userId {
 		return exc.UnauthorizedException("You cannot match that cat that you not own!")
 	}
 
+	// check cat issuer and receiver cannot from the same owner
 	if catIssuerUserId == catReceiverUserId {
 		return exc.BadRequestException("Match cannot be same from the same cat's owner!")
 	}
