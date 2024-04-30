@@ -116,7 +116,7 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 
 	// check cat owner
 	if catIssuerUserId != userId {
-		return exc.UnauthorizedException("You cannot match that cat that you not own!")
+		return exc.UnauthorizedException("You cannot match cat that you not own!")
 	}
 
 	// check cat issuer and receiver cannot from the same owner
