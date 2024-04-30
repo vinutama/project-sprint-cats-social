@@ -9,28 +9,43 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type MatchRepositoryImpl struct {
+type matchRepositoryImpl struct {
 }
 
-func (repository *MatchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, match match_entity.Match) (match_entity.Match, error) {
+func NewMatchRepository() MatchRepository {
+	return &matchRepositoryImpl{}
+}
+
+func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
 	if err := checkCatExists(ctx, tx, match.CatIssuerId, match.CatReceiverId); err != nil {
-		return match_entity.Match{}, err
+		return err
 	}
-	if err := validateMatchCatCriteria(ctx, tx, match.CatIssuerId, match.CatReceiverId); err != nil {
-		return match_entity.Match{}, err
+	if err := validateMatchCatCriteria(ctx, tx, match.CatIssuerId, match.CatReceiverId, userId); err != nil {
+		return err
 	}
 
 	var matchId string
-	query := `INSERT INTO matches (id, message, cat_issuer_id, cat_receiver_id) VALUES (gen_random_uuid(), $1, $2, $3, $4) RETURNING id`
-	if err := tx.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId).Scan(&matchId); err != nil {
-		return match_entity.Match{}, err
+	query := `INSERT INTO matches (id, message, cat_issuer_id, cat_receiver_id)
+	SELECT 
+		gen_random_uuid(), $1, $2, $3, $4
+	WHERE EXISTS (
+		SELECT 1 FROM users WHERE id = $5
+	)
+	RETURNING id;
+	`
+	if err := tx.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId, string(userId)).Scan(&matchId); err != nil {
+		tx.Rollback(ctx)
+		if err == pgx.ErrNoRows {
+			return exc.BadRequestException("Invalid user id")
+		}
+		return err
 	}
 
 	match.Id = matchId
 	if err := tx.Commit(ctx); err != nil {
-		return match_entity.Match{}, err
+		return err
 	}
-	return match, nil
+	return nil
 }
 
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
@@ -62,17 +77,17 @@ func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catRecei
 	return nil
 }
 
-func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiver string) error {
+func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string, userId string) error {
 	query := `SELECT sex, has_matched, user_id WHERE id = $1`
 	var catIssuerSex, catIssuerUserId string
 	var catIssuerHasMatched bool
-	if err := tx.QueryRow(ctx, query, catIssuerId).Scan(&catIssuerSex, &catIssuerHasMatched, &catIssuerUserId); err != nil {
+	if err := tx.QueryRow(ctx, query, string(catIssuerId)).Scan(&catIssuerSex, &catIssuerHasMatched, &catIssuerUserId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
 	var catReceiverSex, catReceiverUserId string
 	var catReceiverHasMatched bool
-	if err := tx.QueryRow(ctx, query, catIssuerId).Scan(&catReceiverSex, &catReceiverHasMatched, &catReceiverUserId); err != nil {
+	if err := tx.QueryRow(ctx, query, string(catReceiverId)).Scan(&catReceiverSex, &catReceiverHasMatched, &catReceiverUserId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
@@ -85,6 +100,10 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 	}
 	if catReceiverHasMatched {
 		return exc.BadRequestException("Cat's receiver already matched, match another one!")
+	}
+
+	if catIssuerUserId != userId {
+		return exc.UnauthorizedException("You cannot match that cat that you not own!")
 	}
 
 	if catIssuerUserId == catReceiverUserId {

@@ -8,5 +8,5 @@ import (
 )
 
 type MatchRepository interface {
-	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match) (match_entity.Match, error)
+	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
 }
