@@ -34,11 +34,12 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		return cat_entity.CatCreateResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
 	}
 
-	tx, err := service.DBPool.Begin(ctx.UserContext())
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
 	if err != nil {
 		return cat_entity.CatCreateResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
 	}
-	defer tx.Rollback(ctx.UserContext())
+	defer tx.Rollback(userCtx)
 
 	userId, err := authService.NewAuthService().GetValidUser(ctx)
 	if err != nil {
@@ -53,7 +54,7 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		ImageURLs:   req.ImageURLs,
 	}
 
-	catRegistered, err := catRep.NewCatRepository().Create(ctx.UserContext(), tx, cat, userId)
+	catRegistered, err := catRep.NewCatRepository().Create(userCtx, tx, cat, userId)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatCreateResponse{}, exc.BadRequestException("Invalid user id")
