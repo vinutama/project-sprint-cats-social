@@ -30,7 +30,6 @@ func NewUserService(catRepository catRep.CatRepository, dbPool *pgxpool.Pool, au
 }
 
 func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRequest) (cat_entity.CatCreateResponse, error) {
-	req.Race = strings.ReplaceAll(req.Race, " ", "")
 	if err := service.Validator.Struct(req); err != nil {
 		return cat_entity.CatCreateResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
 	}
