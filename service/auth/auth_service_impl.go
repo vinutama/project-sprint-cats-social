@@ -2,6 +2,7 @@ package auth_service
 
 import (
 	cfg "cats-social/config"
+	helpers "cats-social/helpers"
 	"context"
 	"time"
 
@@ -35,7 +36,7 @@ func (service *AuthServiceImpl) GenerateToken(ctx context.Context, userId string
 }
 
 func (service *AuthServiceImpl) GetValidUser(ctx *fiber.Ctx) (string, error) {
-	userInfo := ctx.Locals("userInfo").(*jwt.Token)
+	userInfo := ctx.Locals(helpers.JwtContextKey).(*jwt.Token)
 	// convert userInfo claims to jwt mapclaims
 	jwtconf := userInfo.Claims.((jwt.MapClaims))
 	// convert user_id to string
