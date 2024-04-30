@@ -30,7 +30,8 @@ func InitiateTables(dbPool *pgxpool.Pool) error {
 			image_urls TEXT NOT NULL,
 			has_matched BOOL NOT NULL DEFAULT FALSE,
 			is_deleted BOOL NOT NULL DEFAULT FALSE,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		)
 		`,
 		// Add more table creation queries here if needed
