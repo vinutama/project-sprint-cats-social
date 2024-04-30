@@ -27,9 +27,9 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 	var matchId string
 	query := `INSERT INTO matches (id, message, cat_issuer_id, cat_receiver_id)
 	SELECT 
-		gen_random_uuid(), $1, $2, $3, $4
+		gen_random_uuid(), $1, $2, $3
 	WHERE EXISTS (
-		SELECT 1 FROM users WHERE id = $5
+		SELECT 1 FROM users WHERE id = $4
 	)
 	RETURNING id;
 	`
@@ -78,7 +78,7 @@ func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catRecei
 }
 
 func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string, userId string) error {
-	query := `SELECT sex, has_matched, user_id WHERE id = $1`
+	query := `SELECT sex, has_matched, user_id FROM cats WHERE id = $1`
 	var catIssuerSex, catIssuerUserId string
 	var catIssuerHasMatched bool
 	if err := tx.QueryRow(ctx, query, string(catIssuerId)).Scan(&catIssuerSex, &catIssuerHasMatched, &catIssuerUserId); err != nil {
