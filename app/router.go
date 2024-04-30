@@ -3,8 +3,10 @@ package app
 import (
 	"cats-social/controller"
 	"cats-social/helpers"
+	cat_repository "cats-social/repository/cat"
 	user_repository "cats-social/repository/user"
 	auth_service "cats-social/service/auth"
+	cat_service "cats-social/service/cat"
 	user_service "cats-social/service/user"
 
 	"github.com/go-playground/validator"
@@ -23,6 +25,10 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	userService := user_service.NewUserService(userRepository, dbPool, authService, validator)
 	userController := controller.NewUserController(userService, authService)
 
+	catRepository := cat_repository.NewCatRepository()
+	catService := cat_service.NewUserService(catRepository, dbPool, authService, validator)
+	catController := controller.NewCatController(catService, authService)
+
 	// Users API
 	userApi := app.Group("/v1/user")
 	userApi.Post("/register", userController.Register)
@@ -31,6 +37,10 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	// JWT middleware
 	app.Use(helpers.CheckTokenHeader)
 	app.Use(helpers.GetTokenHandler())
+
+	// Cats API
+	catApi := app.Group("/v1/cat")
+	catApi.Post("/", catController.Create)
 
 	// from here need Bearer Token
 	userApi.Get("/hehe", func(c *fiber.Ctx) error {
