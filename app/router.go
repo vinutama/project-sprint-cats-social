@@ -38,12 +38,9 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	app.Use(helpers.CheckTokenHeader)
 	app.Use(helpers.GetTokenHandler())
 
+	// All request below here shoud use Bearer <token>
+
 	// Cats API
 	catApi := app.Group("/v1/cat")
 	catApi.Post("/", catController.Create)
-
-	// from here need Bearer Token
-	userApi.Get("/hehe", func(c *fiber.Ctx) error {
-		return c.SendString("APANIH HEHE")
-	})
 }
