@@ -19,7 +19,7 @@ type matchServiceImpl struct {
 	Validator       *validator.Validate
 }
 
-func NewCatService(matchRepository matchRep.MatchRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) MatchService {
+func NewMatchService(matchRepository matchRep.MatchRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) MatchService {
 	return &matchServiceImpl{
 		MatchRepository: matchRepository,
 		DBPool:          dbPool,

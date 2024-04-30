@@ -14,6 +14,13 @@ type MatchController struct {
 	AuthService  auth_service.AuthService
 }
 
+func NewMatchController(matchService match_service.MatchService, authService auth_service.AuthService) MatchController {
+	return MatchController{
+		MatchService: matchService,
+		AuthService:  authService,
+	}
+}
+
 func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 	matchReq := new(match_entity.MatchCreateRequest)
 	if err := ctx.BodyParser(matchReq); err != nil {
