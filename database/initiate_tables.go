@@ -31,7 +31,7 @@ func InitiateTables(dbPool *pgxpool.Pool) error {
 			has_matched BOOL NOT NULL DEFAULT FALSE,
 			is_deleted BOOL NOT NULL DEFAULT FALSE,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION
 		)
 		`,
 		`
