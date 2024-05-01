@@ -53,6 +53,7 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
 	defer tx.Rollback(ctx)
 
+	// check match id is exist
 	var catIssuerId, catReceiverId, status string
 	query := "SELECT cat_issuer_id, cat_receiver_id, status FROM matches WHERE id = $1 LIMIT 1"
 	if err := tx.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status); err != nil {
@@ -61,10 +62,12 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 		}
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
+	// check match id is valid or not based on status
 	if status != "requested" {
 		return exc.BadRequestException("Match id is no longer valid")
 	}
 
+	// check owner cat id
 	var ownerReceiverId string
 	checkOwnerReceiverCatQ := `SELECT user_id FROM cats WHERE id = $1`
 	if err := tx.QueryRow(ctx, checkOwnerReceiverCatQ, string(catReceiverId)).Scan(&ownerReceiverId); err != nil {
@@ -74,16 +77,19 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 		return exc.UnauthorizedException("You cannot approved that cat you are not belong")
 	}
 
+	// update status match to approved
 	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
 	if _, err := tx.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
 	}
 
+	// update has_matched both cats to true
 	updateCatQuery := `UPDATE cats SET has_matched = $1 WHERE id IN ($2, $3)`
 	if _, err := tx.Exec(ctx, updateCatQuery, true, catIssuerId, catReceiverId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update cat: %s", err))
 	}
 
+	// search remaining other match both cats
 	remainMatchCatIssuerIds, err := getRemainingMatchCat(ctx, tx, catIssuerId)
 	if err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match issuer: %s", err))
@@ -92,9 +98,9 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 	if err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match receiver: %s", err))
 	}
-
 	remainMatchIds := append(remainMatchCatIssuerIds, remainMatchCatReceiverIds...)
 
+	// delete if any remain match requested on both cats
 	if len(remainMatchIds) > 0 {
 		if err := deleteRemainingMatchCat(ctx, tx, remainMatchIds); err != nil {
 			return exc.InternalServerException(fmt.Sprintf("Internal server error when deleting remain match: %s", err))
