@@ -41,6 +41,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	// Cats API
 	catApi := app.Group("/v1/cat")
 	catApi.Post("/", catController.Create)
+	catApi.Put("/:id", catController.EditCat)
 
 	// from here need Bearer Token
 	userApi.Get("/hehe", func(c *fiber.Ctx) error {

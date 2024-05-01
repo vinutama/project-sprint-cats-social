@@ -8,4 +8,5 @@ import (
 
 type CatService interface {
 	Create(ctx *fiber.Ctx, req cat_entity.CatCreateRequest) (cat_entity.CatCreateResponse, error)
+	EditCat(ctx *fiber.Ctx, req cat_entity.CatEditRequest) (cat_entity.CatEditResponse, error)
 }
