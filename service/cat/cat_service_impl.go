@@ -73,8 +73,8 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 	}, nil
 }
 
-func (service *CatServiceImpl) Search(ctx *fiber.Ctx, params cat_entity.CatSearchParams) (cat_entity.CatSearchResponse, error) {
-	if err := service.Validator.Struct(params); err != nil {
+func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.CatSearchQuery) (cat_entity.CatSearchResponse, error) {
+	if err := service.Validator.Struct(searchQueries); err != nil {
 		return cat_entity.CatSearchResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
 	}
 
@@ -91,35 +91,35 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, params cat_entity.CatSearc
 	}
 
 	cat := cat_entity.CatSearch{
-		Id:           params.Id,
-		Race:         params.Race,
-		Sex:          params.Sex,
-		HasMatched:   params.HasMatched,
-		Owned:        params.Owned,
+		Id:           searchQueries.Id,
+		Race:         searchQueries.Race,
+		Sex:          searchQueries.Sex,
+		HasMatched:   searchQueries.HasMatched,
+		Owned:        searchQueries.Owned,
 		UserId:       userId,
 		AgeCondition: "!=",
-		Name:         params.Search,
+		Name:         searchQueries.Search,
 		Limit:        5,
 		Offset:       0,
 	}
 
-	if params.AgeInMonth != "" {
-		if strings.Contains(params.AgeInMonth, ">") || strings.Contains(params.AgeInMonth, "<") {
-			age, _ := strconv.Atoi(params.AgeInMonth[1:len(params.AgeInMonth)])
+	if searchQueries.AgeInMonth != "" {
+		if strings.Contains(searchQueries.AgeInMonth, ">") || strings.Contains(searchQueries.AgeInMonth, "<") {
+			age, _ := strconv.Atoi(searchQueries.AgeInMonth[1:len(searchQueries.AgeInMonth)])
 
-			cat.AgeCondition = fmt.Sprintf("%c", params.AgeInMonth[0])
+			cat.AgeCondition = fmt.Sprintf("%c", searchQueries.AgeInMonth[0])
 			cat.AgeInMonth = age
 		} else {
 			cat.AgeCondition = "="
-			age, _ := strconv.Atoi(params.AgeInMonth)
+			age, _ := strconv.Atoi(searchQueries.AgeInMonth)
 			cat.AgeInMonth = age
 		}
 	}
-	if params.Limit != "" {
-		cat.Limit, _ = strconv.Atoi(params.Limit)
+	if searchQueries.Limit != "" {
+		cat.Limit, _ = strconv.Atoi(searchQueries.Limit)
 	}
-	if params.Offset != "" {
-		cat.Offset, _ = strconv.Atoi(params.Offset)
+	if searchQueries.Offset != "" {
+		cat.Offset, _ = strconv.Atoi(searchQueries.Offset)
 	}
 
 	catSearched, err := catRep.NewCatRepository().Search(userCtx, tx, cat)

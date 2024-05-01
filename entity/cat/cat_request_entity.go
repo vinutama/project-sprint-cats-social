@@ -9,7 +9,7 @@ type CatCreateRequest struct {
 	ImageURLs   []string `json:"imageUrls" validate:"required,min=1,dive,required,url"`
 }
 
-type CatSearchParams struct {
+type CatSearchQuery struct {
 	Id         string `query:"id"`
 	Race       string `query:"race" validate:"omitempty,catRace"`
 	Sex        string `query:"sex" validate:"omitempty,sex"`
