@@ -10,4 +10,5 @@ type CatService interface {
 	Create(ctx *fiber.Ctx, req cat_entity.CatCreateRequest) (cat_entity.CatCreateResponse, error)
 	EditCat(ctx *fiber.Ctx, req cat_entity.CatEditRequest) (cat_entity.CatEditResponse, error)
 	Search(ctx *fiber.Ctx, searchQueries cat_entity.CatSearchQuery) (cat_entity.CatSearchResponse, error)
+	EditCat(ctx *fiber.Ctx, req cat_entity.CatEditRequest) (cat_entity.CatEditResponse, error)
 }
