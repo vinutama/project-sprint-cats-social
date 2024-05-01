@@ -34,6 +34,18 @@ func InitiateTables(dbPool *pgxpool.Pool) error {
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		)
 		`,
+		`
+		CREATE TABLE IF NOT EXISTS matches (
+			id VARCHAR(100) NOT NULL PRIMARY KEY,
+			message VARCHAR(255) NOT NULL,
+			status VARCHAR(100) NOT NULL DEFAULT 'requested',
+			cat_issuer_id VARCHAR(100) NOT NULL,
+			cat_receiver_id VARCHAR(100) NOT NULL,
+			FOREIGN KEY (cat_issuer_id) REFERENCES cats(id) ON DELETE NO ACTION,
+			FOREIGN KEY (cat_receiver_id) REFERENCES cats(id) ON DELETE NO ACTION,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+		`,
 		// Add more table creation queries here if needed
 	}
 
