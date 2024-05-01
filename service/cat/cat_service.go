@@ -8,5 +8,5 @@ import (
 
 type CatService interface {
 	Create(ctx *fiber.Ctx, req cat_entity.CatCreateRequest) (cat_entity.CatCreateResponse, error)
-	Search(ctx *fiber.Ctx, queries cat_entity.CatSearchQueries) (cat_entity.CatSearchResponse, error)
+	Search(ctx *fiber.Ctx, params cat_entity.CatSearchParams) (cat_entity.CatSearchResponse, error)
 }

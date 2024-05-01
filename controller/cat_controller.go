@@ -36,12 +36,12 @@ func (controller *CatController) Create(ctx *fiber.Ctx) error {
 }
 
 func (controller *CatController) Search(ctx *fiber.Ctx) error {
-	catQueries := new(cat_entity.CatSearchQueries)
-	if err := ctx.QueryParser(catQueries); err != nil {
+	catParams := new(cat_entity.CatSearchParams)
+	if err := ctx.QueryParser(catParams); err != nil {
 		return err
 	}
 
-	resp, err := controller.CatService.Search(ctx, *catQueries)
+	resp, err := controller.CatService.Search(ctx, *catParams)
 	if err != nil {
 		return exc.Exception(ctx, err)
 	}
