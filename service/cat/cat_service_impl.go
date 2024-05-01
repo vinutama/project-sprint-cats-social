@@ -90,23 +90,19 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, queries cat_entity.CatSear
 		return cat_entity.CatSearchResponse{}, exc.UnauthorizedException("Unauthorized")
 	}
 
-	cat := cat_entity.CatSearch{}
-	if queries.Id != "" {
-		cat.Id = queries.Id
+	cat := cat_entity.CatSearch{
+		Id:           queries.Id,
+		Race:         queries.Race,
+		Sex:          queries.Sex,
+		HasMatched:   queries.HasMatched,
+		Owned:        queries.Owned,
+		UserId:       userId,
+		AgeCondition: "!=",
+		Name:         queries.Search,
+		Limit:        5,
+		Offset:       0,
 	}
-	if queries.Race != "" {
-		cat.Race = queries.Race
-	}
-	if queries.Sex != "" {
-		cat.Sex = queries.Sex
-	}
-	if queries.HasMatched != "" {
-		cat.HasMatched = queries.HasMatched
-	}
-	if queries.Owned != "" {
-		cat.Owned = queries.Owned
-		cat.UserId = userId
-	}
+
 	if queries.AgeInMonth != "" {
 		if strings.Contains(queries.AgeInMonth, ">") || strings.Contains(queries.AgeInMonth, "<") {
 			age, _ := strconv.Atoi(queries.AgeInMonth[1:len(queries.AgeInMonth)])
@@ -118,21 +114,12 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, queries cat_entity.CatSear
 			age, _ := strconv.Atoi(queries.AgeInMonth)
 			cat.AgeInMonth = age
 		}
-	} else {
-		cat.AgeCondition = "!="
-	}
-	if queries.Search != "" {
-		cat.Name = queries.Search
 	}
 	if queries.Limit != "" {
 		cat.Limit, _ = strconv.Atoi(queries.Limit)
-	} else {
-		cat.Limit = 5
 	}
 	if queries.Offset != "" {
 		cat.Offset, _ = strconv.Atoi(queries.Offset)
-	} else {
-		cat.Offset = 0
 	}
 
 	catSearched, err := catRep.NewCatRepository().Search(userCtx, tx, cat)
