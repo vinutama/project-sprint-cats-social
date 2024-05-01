@@ -48,6 +48,10 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 	return nil
 }
 
+func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+
+}
+
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
 	query := `SELECT id FROM cats WHERE id = $1`
 	catIssuer, err := tx.Exec(ctx, query, string(catIssuerId))

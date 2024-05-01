@@ -9,4 +9,5 @@ import (
 
 type MatchRepository interface {
 	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
+	Approve(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
 }
