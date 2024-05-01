@@ -54,8 +54,8 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
         ($3 = '' OR sex = $3) AND
         ($4 = '' OR name LIKE '%%' || $4 || '%%') AND
         ($5 = '' OR has_matched = CAST($5 AS BOOL)) AND
-        (CASE WHEN $6 > 0 THEN age_in_month %s $6 ELSE TRUE END) AND
-        (CASE WHEN $7 = 'true' THEN user_id = $8 WHEN $7 = 'false' THEN user_id != $8 ELSE $8 = '' END)
+        (CASE WHEN $6 >= 0 THEN age_in_month %s $6 ELSE TRUE END) AND
+        (CASE WHEN $7 = 'true' THEN user_id = $8 WHEN $7 = 'false' THEN user_id != $8 ELSE TRUE END)
         LIMIT $9 OFFSET $10;`, searchQuery.AgeCondition)
 
 	err := pgxscan.Select(ctx, tx, &cats, query, searchQuery.Id, searchQuery.Race, searchQuery.Sex, searchQuery.Name, searchQuery.HasMatched, searchQuery.AgeInMonth, searchQuery.Owned, searchQuery.UserId, searchQuery.Limit, searchQuery.Offset)
