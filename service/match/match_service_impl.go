@@ -50,12 +50,17 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 		CatReceiverId: req.MatchCatId,
 	}
 
-	if err := matchRep.NewMatchRepository().Create(userCtx, tx, match, userId); err != nil {
+	matchRegistered, err := matchRep.NewMatchRepository().Create(userCtx, tx, match, userId)
+	if err != nil {
 		return match_entity.MatchCreateResponse{}, err
 	}
 
 	return match_entity.MatchCreateResponse{
-		Message: "Cat Successfully matched",
+		Message: "Match request success, waiting for response from receiver",
+		Data: &match_entity.MatchCreateDataResponse{
+			Id:        matchRegistered.Id,
+			CreatedAt: matchRegistered.CreatedAt,
+		},
 	}, nil
 
 }

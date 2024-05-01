@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -18,36 +19,38 @@ func NewMatchRepository() MatchRepository {
 	return &matchRepositoryImpl{}
 }
 
-func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) (match_entity.Match, error) {
 	if err := checkCatExists(ctx, tx, match.CatIssuerId, match.CatReceiverId); err != nil {
-		return err
+		return match_entity.Match{}, err
 	}
 	if err := validateMatchCatCriteria(ctx, tx, match.CatIssuerId, match.CatReceiverId, userId); err != nil {
-		return err
+		return match_entity.Match{}, err
 	}
 
 	var matchId string
+	var createdAt time.Time
 	query := `INSERT INTO matches (id, message, cat_issuer_id, cat_receiver_id)
 	SELECT 
 		gen_random_uuid(), $1, $2, $3
 	WHERE EXISTS (
 		SELECT 1 FROM users WHERE id = $4
 	)
-	RETURNING id;
+	RETURNING id, created_at;
 	`
-	if err := tx.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId, string(userId)).Scan(&matchId); err != nil {
+	if err := tx.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId, string(userId)).Scan(&matchId, &createdAt); err != nil {
 		tx.Rollback(ctx)
 		if err == pgx.ErrNoRows {
-			return exc.BadRequestException("Invalid user id")
+			return match_entity.Match{}, exc.BadRequestException("Invalid user id")
 		}
-		return err
+		return match_entity.Match{}, err
 	}
 
 	match.Id = matchId
+	match.CreatedAt = createdAt.Format(time.RFC3339)
 	if err := tx.Commit(ctx); err != nil {
-		return err
+		return match_entity.Match{}, err
 	}
-	return nil
+	return match, nil
 }
 
 func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {

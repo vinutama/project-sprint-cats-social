@@ -8,6 +8,6 @@ import (
 )
 
 type MatchRepository interface {
-	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
+	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) (match_entity.Match, error)
 	Approve(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
 }
