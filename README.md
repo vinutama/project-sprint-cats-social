@@ -20,6 +20,10 @@ JWT_SECRET=
 - run `make build-dev`
 - run `make run-dev`
 
+if you're running this for the first time, do:
+- run `make migrate-db`
+
+
 # Stacks
 - Golang >1.21.0
 - Go Fiber
