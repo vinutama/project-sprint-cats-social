@@ -9,7 +9,7 @@ import (
 func Exception(ctx *fiber.Ctx, err error) error {
 	if fiberErr, ok := err.(*fiber.Error); ok {
 		// If it's a Fiber error, return it as JSON
-		return ctx.Status(fiberErr.Code).JSON(fiber.Map{"message": fiberErr.Message})
+		return ctx.Status(fiberErr.Code).JSON(fiber.Map{"error": fiberErr.Message})
 	}
 	// Otherwise, return the error as is
 	return err
