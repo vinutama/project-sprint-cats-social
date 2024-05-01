@@ -8,4 +8,5 @@ import (
 
 type MatchService interface {
 	Create(ctx *fiber.Ctx, req match_entity.MatchCreateRequest) (match_entity.MatchCreateResponse, error)
+	Approve(ctx *fiber.Ctx, req match_entity.MatchApproveRequest) (match_entity.MatchApproveResponse, error)
 }

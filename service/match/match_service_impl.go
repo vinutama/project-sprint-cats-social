@@ -59,3 +59,32 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 	}, nil
 
 }
+
+func (service *matchServiceImpl) Approve(ctx *fiber.Ctx, req match_entity.MatchApproveRequest) (match_entity.MatchApproveResponse, error) {
+	if err := service.Validator.Struct(req); err != nil {
+		return match_entity.MatchApproveResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
+	}
+
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return match_entity.MatchApproveResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	defer tx.Rollback(userCtx)
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return match_entity.MatchApproveResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+	match := match_entity.Match{
+		Id: req.MatchId,
+	}
+
+	if err := matchRep.NewMatchRepository().Approve(userCtx, tx, match, userId); err != nil {
+		return match_entity.MatchApproveResponse{}, err
+	}
+
+	return match_entity.MatchApproveResponse{
+		Message: "Congratulations your cat is matched!",
+	}, nil
+}
