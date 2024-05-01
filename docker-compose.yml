@@ -21,8 +21,8 @@ services:
       - POSTGRES_HOST=cats-db
     ports:
       - 5432:5432
-    # volumes:
-    #   - postgres-db:/var/lib/postgres/data
+    volumes:
+      - postgres-db:/var/lib/postgres/data
 
 volumes:
   postgres-db:
