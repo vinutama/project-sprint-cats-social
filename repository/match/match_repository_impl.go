@@ -5,6 +5,7 @@ import (
 	exc "cats-social/exceptions"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -49,7 +50,81 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 }
 
 func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+	defer tx.Rollback(ctx)
 
+	var catIssuerId, catReceiverId, status string
+	query := "SELECT cat_issuer_id, cat_receiver_id, status FROM matches WHERE id = $1 LIMIT 1"
+	if err := tx.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status); err != nil {
+		if err == pgx.ErrNoRows {
+			return exc.NotFoundException("Match id is not found")
+		}
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+	if status != "requested" {
+		return exc.BadRequestException("Match id is no longer valid")
+	}
+
+	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
+	if _, err := tx.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+
+	updateCatQuery := `UPDATE cats SET has_matched = $1 WHERE id IN ('$2', '$3')`
+	if _, err := tx.Exec(ctx, updateCatQuery, true, string(catIssuerId), string(catReceiverId)); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+
+	remainMatchCatIssuerIds, err := getRemainingMatchCat(ctx, tx, string(catIssuerId))
+	if err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, string(catIssuerId))
+	if err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+
+	remainMatchIds := append(remainMatchCatIssuerIds, remainMatchCatReceiverIds...)
+
+	if len(remainMatchIds) > 0 {
+		if err := deleteRemainingMatchCat(ctx, tx, remainMatchIds); err != nil {
+			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+
+	return nil
+
+}
+
+func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, matchIds []string) error {
+	query := `DELETE FROM matches WHERE id IN $1`
+	if _, err := tx.Exec(ctx, query, strings.Join(matchIds, ", ")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getRemainingMatchCat(ctx context.Context, tx pgx.Tx, catId string) ([]string, error) {
+	var matchCatIds []string
+	remainingMatchCatsQ := `SELECT id FROM matches WHERE (cat_issuer_id = $1 OR cat_receiver_id = $1) AND status = 'requested'`
+	rows, err := tx.Query(ctx, remainingMatchCatsQ, string(catId))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		matchCatIds = append(matchCatIds, id)
+	}
+
+	return matchCatIds, nil
 }
 
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
