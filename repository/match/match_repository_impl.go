@@ -64,6 +64,15 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 		return exc.BadRequestException("Match id is no longer valid")
 	}
 
+	var ownerReceiverId string
+	checkOwnerReceiverCatQ := `SELECT user_id FROM cats WHERE id = $1`
+	if err := tx.QueryRow(ctx, checkOwnerReceiverCatQ, string(catReceiverId)).Scan(&ownerReceiverId); err != nil {
+		exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+	if ownerReceiverId != userId {
+		return exc.UnauthorizedException("You cannot approved that cat you are not belong")
+	}
+
 	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
 	if _, err := tx.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
