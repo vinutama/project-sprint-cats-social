@@ -5,6 +5,7 @@ import (
 	exc "cats-social/exceptions"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -75,28 +76,28 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 
 	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
 	if _, err := tx.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
 	}
 
-	updateCatQuery := `UPDATE cats SET has_matched = $1 WHERE id IN ('$2', '$3')`
-	if _, err := tx.Exec(ctx, updateCatQuery, true, string(catIssuerId), string(catReceiverId)); err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	updateCatQuery := `UPDATE cats SET has_matched = $1 WHERE id IN ($2, $3)`
+	if _, err := tx.Exec(ctx, updateCatQuery, true, catIssuerId, catReceiverId); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when update cat: %s", err))
 	}
 
-	remainMatchCatIssuerIds, err := getRemainingMatchCat(ctx, tx, string(catIssuerId))
+	remainMatchCatIssuerIds, err := getRemainingMatchCat(ctx, tx, catIssuerId)
 	if err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match issuer: %s", err))
 	}
-	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, string(catIssuerId))
+	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, catIssuerId)
 	if err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match receiver: %s", err))
 	}
 
 	remainMatchIds := append(remainMatchCatIssuerIds, remainMatchCatReceiverIds...)
 
 	if len(remainMatchIds) > 0 {
 		if err := deleteRemainingMatchCat(ctx, tx, remainMatchIds); err != nil {
-			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+			return exc.InternalServerException(fmt.Sprintf("Internal server error when deleting remain match: %s", err))
 		}
 	}
 
@@ -109,8 +110,15 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 }
 
 func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, matchIds []string) error {
-	query := `DELETE FROM matches WHERE id IN $1`
-	if _, err := tx.Exec(ctx, query, strings.Join(matchIds, ", ")); err != nil {
+	placeholders := make([]string, len(matchIds))
+	values := make([]interface{}, len(matchIds))
+	for i, matchId := range matchIds {
+		placeholders[i] = "$" + strconv.Itoa(i+1)
+		values[i] = matchId
+	}
+
+	query := fmt.Sprintf(`DELETE FROM matches WHERE id IN (%s)`, strings.Join(placeholders, ", "))
+	if _, err := tx.Exec(ctx, query, values...); err != nil {
 		return err
 	}
 	return nil
