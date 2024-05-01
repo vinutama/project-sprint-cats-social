@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -46,8 +45,7 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 }
 
 func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, searchQuery cat_entity.CatSearch) ([]cat_entity.Cat, error) {
-	var cats = []cat_entity.Cat{}
-	query := fmt.Sprintf(`SELECT id, name, race, sex, age_in_month, image_urls, description, has_matched, created_at FROM cats
+	query := fmt.Sprintf(`SELECT * FROM cats
     WHERE
         ($1 = '' OR id = $1) AND
         ($2 = '' OR race = $2) AND
@@ -59,9 +57,10 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 		ORDER BY created_at DESC
         LIMIT $9 OFFSET $10;`, searchQuery.AgeCondition)
 
-	err := pgxscan.Select(ctx, tx, &cats, query, searchQuery.Id, searchQuery.Race, searchQuery.Sex, searchQuery.Name, searchQuery.HasMatched, searchQuery.AgeInMonth, searchQuery.Owned, searchQuery.UserId, searchQuery.Limit, searchQuery.Offset)
+	rows, _ := tx.Query(ctx, query, searchQuery.Id, searchQuery.Race, searchQuery.Sex, searchQuery.Name, searchQuery.HasMatched, searchQuery.AgeInMonth, searchQuery.Owned, searchQuery.UserId, searchQuery.Limit, searchQuery.Offset)
+	cats, err := pgx.CollectRows(rows, pgx.RowToStructByName[cat_entity.Cat])
 	if err != nil {
-		return cats, err
+		return []cat_entity.Cat{}, err
 	}
 
 	return cats, nil
