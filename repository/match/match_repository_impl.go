@@ -54,8 +54,6 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 }
 
 func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
-	defer tx.Rollback(ctx)
-
 	// check match id is exist
 	var catIssuerId, catReceiverId, status string
 	query := "SELECT cat_issuer_id, cat_receiver_id, status FROM matches WHERE id = $1 LIMIT 1"
