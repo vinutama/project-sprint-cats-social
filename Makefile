@@ -18,3 +18,6 @@ check-db:
 
 clear-db:
 	docker rm -f -v cats-db
+
+migrate-db:
+	migrate -database "postgres://cats:password@localhost:5432/cats-db?sslmode=disable" -path db/migrations up
