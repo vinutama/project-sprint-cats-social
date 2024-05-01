@@ -47,39 +47,18 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 
 func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, searchQuery cat_entity.CatSearch) ([]cat_entity.Cat, error) {
 	var cats = []cat_entity.Cat{}
-	query := `SELECT id, name, race, sex, age_in_month, image_urls, description, has_matched, created_at FROM cats
-	WHERE
-		($1 = '' OR id = $1) AND
-		($2 = '' OR race = $2) AND
-		($3 = '' OR sex = $3) AND
-		($4 = '' OR name = $4)`
+	query := fmt.Sprintf(`SELECT id, name, race, sex, age_in_month, image_urls, description, has_matched, created_at FROM cats
+    WHERE
+        ($1 = '' OR id = $1) AND
+        ($2 = '' OR race = $2) AND
+        ($3 = '' OR sex = $3) AND
+        ($4 = '' OR name LIKE '%%' || $4 || '%%') AND
+        ($5 = '' OR has_matched = CAST($5 AS BOOL)) AND
+        (CASE WHEN $6 > 0 THEN age_in_month %s $6 ELSE TRUE END) AND
+        (CASE WHEN $7 = 'true' THEN user_id = $8 WHEN $7 = 'false' THEN user_id != $8 ELSE $8 = '' END)
+        LIMIT $9 OFFSET $10;`, searchQuery.AgeCondition)
 
-	if searchQuery.HasMatched != "" {
-		if searchQuery.HasMatched == "true" || searchQuery.HasMatched == "false" {
-			query += " AND has_matched = $5"
-		}
-
-	} else {
-		query += " AND ($5 = '')"
-	}
-	if searchQuery.AgeInMonth != 0 {
-		query += fmt.Sprintf(" AND age_in_month %s $6", searchQuery.AgeCondition)
-	} else {
-		query += " AND age_in_month != $6"
-	}
-	if searchQuery.Owned != "" {
-		if searchQuery.Owned == "true" {
-			query += " AND user_id = $7"
-		} else {
-			query += " AND user_id != $7"
-
-		}
-	} else {
-		query += " AND user_id != $7"
-	}
-	query += " LIMIT $8 OFFSET $9;"
-
-	err := pgxscan.Select(ctx, tx, &cats, query, searchQuery.Id, searchQuery.Race, searchQuery.Sex, searchQuery.Name, searchQuery.HasMatched, searchQuery.AgeInMonth, searchQuery.UserId, searchQuery.Limit, searchQuery.Offset)
+	err := pgxscan.Select(ctx, tx, &cats, query, searchQuery.Id, searchQuery.Race, searchQuery.Sex, searchQuery.Name, searchQuery.HasMatched, searchQuery.AgeInMonth, searchQuery.Owned, searchQuery.UserId, searchQuery.Limit, searchQuery.Offset)
 	if err != nil {
 		return cats, err
 	}

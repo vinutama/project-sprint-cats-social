@@ -118,6 +118,8 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, queries cat_entity.CatSear
 			age, _ := strconv.Atoi(queries.AgeInMonth)
 			cat.AgeInMonth = age
 		}
+	} else {
+		cat.AgeCondition = "!="
 	}
 	if queries.Search != "" {
 		cat.Name = queries.Search
