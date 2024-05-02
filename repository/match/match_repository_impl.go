@@ -180,8 +180,6 @@ func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, catIssuerId string,
 			cat_issuer_id = $2 OR cat_receiver_id = $1
 		) AND status = 'requested'
 	`
-
-	// query := fmt.Sprintf(`DELETE FROM matches WHERE id IN (%s)`, strings.Join(placeholders, ", "))
 	if _, err := tx.Exec(ctx, query, catIssuerId, catReceiverId); err != nil {
 		return err
 	}
