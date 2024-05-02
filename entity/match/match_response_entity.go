@@ -10,7 +10,7 @@ type CatDataResponse struct {
 	Race        string   `json:"race"`
 	Sex         string   `json:"sex"`
 	AgeInMonth  int      `json:"ageInMonth"`
-	ImageURLs   string `json:"imageUrls"`
+	ImageURLs   []string `json:"imageUrls"`
 	Description string   `json:"description"`
 	HasMatched  bool     `json:"hasMatched"`
 	CreatedAt   string   `json:"createdAt"`
