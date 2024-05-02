@@ -74,19 +74,14 @@ func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId str
 	var matchIssuerId string
 	query := `SELECT m.status, c.user_id FROM matches m 
 	JOIN cats c ON m.cat_issuer_id = c.id 
-	WHERE m.id = $1;`
-	err := tx.QueryRow(ctx, query, matchId).Scan(&status, &matchIssuerId)
+	WHERE m.id = $1 and c.user_id = $2;`
+	err := tx.QueryRow(ctx, query, matchId, userId).Scan(&status, &matchIssuerId)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("MatchId not found")
 		} else {
 			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 		}
-	}
-
-	// check userId is the same with matchIssuerId or not
-	if userId != matchIssuerId {
-		return exc.ForbiddenException("Not allowed to delete match request")
 	}
 
 	// check match status
