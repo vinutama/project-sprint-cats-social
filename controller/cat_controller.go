@@ -56,6 +56,9 @@ func (controller *CatController) Search(ctx *fiber.Ctx) error {
 	}
 
 	resp, err := controller.CatService.Search(ctx, *catSearchQueries)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
 	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
 func (controller *CatController) EditCat(ctx *fiber.Ctx) error {
