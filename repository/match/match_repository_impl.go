@@ -78,15 +78,13 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 }
 
 func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
-	// check nama function bang
-	err := checkMatchStatus(ctx, tx, match.Id, userId)
+	err := checkMatchDeletionEligibility(ctx, tx, match.Id, userId)
 	if err != nil {
 		return err
 	}
 
 	query := `DELETE FROM matches WHERE id = $1`
 	if _, err = tx.Exec(ctx, query, match.Id); err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 
@@ -97,8 +95,7 @@ func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, ma
 	return nil
 }
 
-// bang rekomen mana function, disini buat check status matchnya sama check boleh ngedelete atau engga
-func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
+func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
 	var status string
 	var matchIssuerId string
 	query := `SELECT m.status, c.user_id FROM matches m 
@@ -114,7 +111,7 @@ func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId str
 	}
 
 	// check match status
-	if status == "approved" || status == "rejected" {
+	if status != "requested" {
 		return exc.BadRequestException("matchId is already approved / reject")
 	}
 
