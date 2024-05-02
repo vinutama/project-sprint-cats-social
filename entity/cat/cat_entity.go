@@ -10,7 +10,7 @@ type Cat struct {
 	AgeInMonth  int
 	UserId      string
 	Description string
-	ImageURLs   string `db:"image_urls"`
+	ImageURLs   []string `db:"image_urls"`
 	HasMatched  bool
 	IsDeleted   bool
 	CreatedAt   time.Time

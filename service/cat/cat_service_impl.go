@@ -53,7 +53,7 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		Sex:         req.Sex,
 		AgeInMonth:  req.AgeInMonth,
 		Description: req.Description,
-		ImageURLs:   strings.Join(req.ImageURLs, "||"),
+		ImageURLs:   req.ImageURLs,
 	}
 
 	catRegistered, err := catRep.NewCatRepository().Create(userCtx, tx, cat, userId)
@@ -135,7 +135,7 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 			Race:        cat.Race,
 			Sex:         cat.Sex,
 			AgeInMonth:  cat.AgeInMonth,
-			ImageURLs:   strings.Split(cat.ImageURLs, "||"),
+			ImageURLs:   cat.ImageURLs,
 			Description: cat.Description,
 			HasMatched:  cat.HasMatched,
 			CreatedAt:   cat.CreatedAt.Format(time.RFC3339),
