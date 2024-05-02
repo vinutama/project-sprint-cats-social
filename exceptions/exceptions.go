@@ -34,3 +34,7 @@ func InternalServerException(message string) error {
 func UnauthorizedException(message string) error {
 	return fiber.NewError(fiber.StatusUnauthorized, message)
 }
+
+func ForbiddenException(message string) error {
+	return fiber.NewError(fiber.StatusForbidden, message)
+}

@@ -48,6 +48,55 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 	return nil
 }
 
+func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+	// check nama function bang
+	err := checkMatchStatus(ctx, tx, match.Id, userId)
+	if err != nil {
+		return err
+	}
+
+	query := `DELETE FROM matches WHERE id = $1`
+	if _, err = tx.Exec(ctx, query, match.Id); err != nil {
+		tx.Rollback(ctx)
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// bang rekomen mana function, disini buat check status matchnya sama check boleh ngedelete atau engga
+func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
+	var status string
+	var matchIssuerId string
+	query := `SELECT m.status, c.user_id FROM matches m 
+	JOIN cats c ON m.cat_issuer_id = c.id 
+	WHERE m.id = $1;`
+	err := tx.QueryRow(ctx, query, matchId).Scan(&status, &matchIssuerId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return exc.NotFoundException("MatchId not found")
+		} else {
+			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		}
+	}
+
+	// check userId is the same with matchIssuerId or not
+	if userId != matchIssuerId {
+		return exc.ForbiddenException("Not allowed to delete this data")
+	}
+
+	// check match status
+	if status == "approved" || status == "rejected" {
+		return exc.BadRequestException("Already in match")
+	}
+
+	return nil
+}
+
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
 	query := `SELECT id FROM cats WHERE id = $1`
 	catIssuer, err := tx.Exec(ctx, query, string(catIssuerId))
