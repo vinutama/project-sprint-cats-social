@@ -57,7 +57,6 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 	return match_entity.MatchCreateResponse{
 		Message: "Cat Successfully matched",
 	}, nil
-
 }
 
 func (service *matchServiceImpl) Get(ctx *fiber.Ctx) (match_entity.MatchGetResponse, error) {
@@ -83,4 +82,32 @@ func (service *matchServiceImpl) Get(ctx *fiber.Ctx) (match_entity.MatchGetRespo
 		Data:    &data,
 	}, nil
 
+}
+
+func (service *matchServiceImpl) Delete(ctx *fiber.Ctx, params match_entity.MatchDeleteParams) (match_entity.MatchDeleteResponse, error) {
+	if err := service.Validator.Struct(params); err != nil {
+		return match_entity.MatchDeleteResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
+	}
+
+	userCtx := ctx.Context()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return match_entity.MatchDeleteResponse{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+	defer tx.Rollback(userCtx)
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return match_entity.MatchDeleteResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+	match := match_entity.Match{
+		Id: params.Id,
+	}
+	if err := matchRep.NewMatchRepository().Delete(userCtx, tx, match, userId); err != nil {
+		return match_entity.MatchDeleteResponse{}, err
+	}
+
+	return match_entity.MatchDeleteResponse{
+		Message: "Match request successfully deleted",
+	}, nil
 }

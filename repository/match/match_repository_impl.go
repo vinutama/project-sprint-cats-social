@@ -67,7 +67,7 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 		return []match_entity.MatchGetDataResponse{}, err
 	}
 	defer rows.Close()
-	
+
 	matches, err := pgx.CollectRows(rows, pgx.RowToStructByName[match_entity.MatchGetDataResponse])
 
 	if err != nil {
@@ -75,6 +75,47 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 	}
 
 	return matches, nil
+}
+
+func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+	err := checkMatchDeletionEligibility(ctx, tx, match.Id, userId)
+	if err != nil {
+		return err
+	}
+
+	query := `DELETE FROM matches WHERE id = $1`
+	if _, err = tx.Exec(ctx, query, match.Id); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
+	var status string
+	var matchIssuerId string
+	query := `SELECT m.status, c.user_id FROM matches m 
+	JOIN cats c ON m.cat_issuer_id = c.id 
+	WHERE m.id = $1 and c.user_id = $2;`
+	err := tx.QueryRow(ctx, query, matchId, userId).Scan(&status, &matchIssuerId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return exc.NotFoundException("MatchId not found")
+		} else {
+			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		}
+	}
+
+	// check match status
+	if status != "requested" {
+		return exc.BadRequestException("matchId is already approved / reject")
+	}
+
+	return nil
 }
 
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
