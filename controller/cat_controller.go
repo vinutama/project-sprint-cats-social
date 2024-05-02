@@ -59,5 +59,6 @@ func (controller *CatController) Search(ctx *fiber.Ctx) error {
 	if err != nil {
 		return exc.Exception(ctx, err)
 	}
+
 	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
