@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -47,7 +46,7 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 }
 
 func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, searchQuery cat_entity.CatSearch) ([]cat_entity.Cat, error) {
-	query := `SELECT * FROM cats`
+	query := `SELECT * FROM cats WHERE is_deleted = false`
 	var whereClause []string
 	params := []interface{}{}
 
@@ -91,10 +90,6 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 		params = append(params, searchQuery.UserId)
 	}
 
-	if len(whereClause) > 0 {
-		query += " WHERE " + strings.Join(whereClause, " AND ")
-	}
-
 	query += " ORDER BY created_at DESC"
 
 	if searchQuery.Limit > 0 {
@@ -115,4 +110,21 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 	}
 
 	return cats, nil
+}
+
+func (repository *CatRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, catId string, ownerId string) (cat_entity.Cat, error) {
+	query := `DELETE from cats where id=$1 and user_id=$2 returning id`
+	if err := tx.QueryRow(ctx, query, catId, ownerId).Scan(&catId); err != nil {
+		return cat_entity.Cat{}, err
+	}
+
+	cat := cat_entity.Cat{}
+
+	cat.Id = catId
+
+	if err := tx.Commit(ctx); err != nil {
+		return cat_entity.Cat{}, err
+	}
+
+	return cat, nil
 }
