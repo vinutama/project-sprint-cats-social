@@ -19,11 +19,11 @@ type CatEditRequest struct {
 }
 type CatSearchQuery struct {
 	Id         string `query:"id"`
-	Race       string `query:"race" validate:"omitempty,catRace"`
-	Sex        string `query:"sex" validate:"omitempty,sex"`
-	HasMatched string `query:"hasMatched" validate:"omitempty,boolean"`
+	Race       string `query:"race" validate:"omitempty"`
+	Sex        string `query:"sex" validate:"omitempty"`
+	HasMatched string `query:"hasMatched" validate:"omitempty"`
 	AgeInMonth string `query:"ageInMonth" validate:"omitempty,regex=^([<>]?)\\d+$"`
-	Owned      string `query:"owned" validate:"omitempty,boolean"`
+	Owned      string `query:"owned" validate:"omitempty"`
 	Search     string `query:"search"`
 	Limit      string `query:"limit" validate:"omitempty,number,min=0"`
 	Offset     string `query:"offset" validate:"omitempty,number,min=0"`
