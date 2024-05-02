@@ -10,7 +10,7 @@ type MatchCreateResponse struct {
 	Data    *MatchCreateDataResponse `json:"data"`
 }
 
-type MatchApproveResponse struct {
+type MatchActionResponse struct {
 	Message string `json:"message"`
 }
 
