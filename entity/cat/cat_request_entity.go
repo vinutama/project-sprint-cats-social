@@ -17,3 +17,14 @@ type CatEditRequest struct {
 	Description string   `json:"description" validate:"min=1,max=200"`
 	ImageURLs   []string `json:"imageUrls" validate:"min=1,dive,required,url"`
 }
+type CatSearchQuery struct {
+	Id         string `query:"id"`
+	Race       string `query:"race" validate:"omitempty,catRace"`
+	Sex        string `query:"sex" validate:"omitempty,sex"`
+	HasMatched string `query:"hasMatched" validate:"omitempty,boolean"`
+	AgeInMonth string `query:"ageInMonth" validate:"omitempty,regex=^([<>]?)\\d+$"`
+	Owned      string `query:"owned" validate:"omitempty,boolean"`
+	Search     string `query:"search"`
+	Limit      string `query:"limit" validate:"omitempty,number,min=0"`
+	Offset     string `query:"offset" validate:"omitempty,number,min=0"`
+}
