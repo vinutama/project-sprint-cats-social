@@ -11,8 +11,8 @@ type CatCreateRequest struct {
 
 type CatSearchQuery struct {
 	Id         string `query:"id"`
-	Race       string `query:"race" validate:"omitempty,catRace"`
-	Sex        string `query:"sex" validate:"omitempty,sex"`
+	Race       string `query:"race" validate:"omitempty"`
+	Sex        string `query:"sex" validate:"omitempty"`
 	HasMatched string `query:"hasMatched" validate:"omitempty,boolean"`
 	AgeInMonth string `query:"ageInMonth" validate:"omitempty,regex=^([<>]?)\\d+$"`
 	Owned      string `query:"owned" validate:"omitempty,boolean"`
