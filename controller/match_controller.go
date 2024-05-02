@@ -34,3 +34,12 @@ func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 }
+
+func (controller *MatchController) Get(ctx *fiber.Ctx) error {
+	resp, err := controller.MatchService.Get(ctx)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}
