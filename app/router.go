@@ -55,4 +55,5 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	// Match API
 	matchApi := catApi.Group("/match")
 	matchApi.Post("/", matchController.Create)
+	matchApi.Get("/", matchController.Get)
 }

@@ -9,7 +9,7 @@ CatSocial is an application where cat owners can match cats with each other
 ```go
 DB_NAME=
 DB_HOST=
-DB_USER=
+DB_USERNAME=
 DB_PASSWORD=
 DB_PORT=5432
 
