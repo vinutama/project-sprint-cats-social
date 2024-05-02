@@ -163,14 +163,13 @@ func (repository *matchRepositoryImpl) Reject(ctx context.Context, tx pgx.Tx, ma
 		return exc.BadRequestException("Match id is no longer valid")
 	}
 
-	fmt.Println(ownerReceiverId, userId)
 	if ownerReceiverId != userId {
 		return exc.UnauthorizedException("You cannot reject that cat you are not belong")
 	}
 
 	// update status match to rejected
-	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
-	if _, err := tx.Exec(ctx, approveQuery, "rejected", string(match.Id)); err != nil {
+	rejectQuery := `UPDATE matches SET status = $1 WHERE id = $2`
+	if _, err := tx.Exec(ctx, rejectQuery, "rejected", string(match.Id)); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
 	}
 
