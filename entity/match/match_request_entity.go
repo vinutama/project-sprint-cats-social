@@ -5,3 +5,7 @@ type MatchCreateRequest struct {
 	UserCatId  string `json:"userCatId" validate:"required"`
 	Message    string `json:"message" validate:"required,min=5,max=120"`
 }
+
+type MatchDeleteParams struct {
+	Id string `param:"id" validate:"required"`
+}
