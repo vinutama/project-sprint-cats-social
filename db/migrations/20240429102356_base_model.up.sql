@@ -13,9 +13,19 @@ CREATE TABLE IF NOT EXISTS cats (
     age_in_month INT NOT NULL,
     user_id VARCHAR(100) NOT NULL,
     description VARCHAR(255) NOT NULL,
-    image_urls TEXT NOT NULL,
+    image_urls TEXT [] NOT NULL,
     has_matched BOOL NOT NULL DEFAULT FALSE,
     is_deleted BOOL NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS matches (
+    id VARCHAR(100) NOT NULL PRIMARY KEY,
+    message VARCHAR(255) NOT NULL,
+    status VARCHAR(100) NOT NULL DEFAULT 'requested',
+    cat_issuer_id VARCHAR(100) NOT NULL,
+    cat_receiver_id VARCHAR(100) NOT NULL,
+    FOREIGN KEY (cat_issuer_id) REFERENCES cats(id) ON DELETE NO ACTION,
+    FOREIGN KEY (cat_receiver_id) REFERENCES cats(id) ON DELETE NO ACTION,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
