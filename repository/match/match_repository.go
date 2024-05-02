@@ -9,4 +9,5 @@ import (
 
 type MatchRepository interface {
 	Create(ctx context.Context, tx pgx.Tx, req match_entity.Match, userId string) error
+	Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error)
 }
