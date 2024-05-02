@@ -95,7 +95,7 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 	if err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match issuer: %s", err))
 	}
-	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, catIssuerId)
+	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, catReceiverId)
 	if err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match receiver: %s", err))
 	}
@@ -213,13 +213,16 @@ func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catRecei
 
 func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string, userId string) error {
 	// check match request already exist or not
-	checkRequestMatchQ := `SELECT EXISTS (SELECT 1 FROM matches m WHERE m.cat_issuer_id = $1 AND m.cat_receiver_id = $2 AND status = $3)`
+	checkRequestMatchQ := `SELECT EXISTS (SELECT 1 FROM matches m 
+			WHERE (m.cat_issuer_id = $1 AND m.cat_receiver_id = $2 OR m.cat_issuer_id = $2 AND m.cat_receiver_id = $1)
+			AND status = $3
+		)`
 	var isAlreadyRequestMatch bool
 	if err := tx.QueryRow(ctx, checkRequestMatchQ, string(catIssuerId), string(catReceiverId), "requested").Scan(&isAlreadyRequestMatch); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 	if isAlreadyRequestMatch {
-		return exc.ConflictException("Your cat has already request match to this cat, please waiting for response from receiver!")
+		return exc.ConflictException("Your cat has already request match to this cat")
 	}
 
 	query := `SELECT sex, has_matched, user_id FROM cats WHERE id = $1`
