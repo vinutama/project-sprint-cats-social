@@ -151,6 +151,35 @@ func getRemainingMatchCat(ctx context.Context, tx pgx.Tx, catId string) ([]strin
 	return matchCatIds, nil
 }
 
+func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error) {
+	query := `SELECT m.id, 
+	json_build_object('name', u.name, 'email', u.email, 'createdAt', to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) issuedBy, 
+	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', to_char(c1.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) matchCatDetail,
+	json_build_object('id', c2.id, 'name', c2.name, 'race', c2.race, 'sex', c2.sex, 'ageInMonth', c2.age_in_month, 'imageUrls', c2.image_urls, 'description', c2.description, 'hasMatched', c2.has_matched, 'createdAt', to_char(c2.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) userCatDetail,
+	m.message,
+	to_char(m.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') createdAt
+	FROM matches m
+		JOIN cats c1 ON c1.id = m.cat_receiver_id
+		JOIN cats c2 ON c2.id = m.cat_issuer_id
+		JOIN users u ON u.id = c2.user_id
+	WHERE c1.user_id = $1 OR c2.user_id = $1
+	ORDER BY m.created_at DESC
+	`
+	rows, err := tx.Query(ctx, query, string(userId))
+	if err != nil {
+		return []match_entity.MatchGetDataResponse{}, err
+	}
+	defer rows.Close()
+
+	matches, err := pgx.CollectRows(rows, pgx.RowToStructByName[match_entity.MatchGetDataResponse])
+
+	if err != nil {
+		return []match_entity.MatchGetDataResponse{}, err
+	}
+
+	return matches, nil
+}
+
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
 	query := `SELECT id FROM cats WHERE id = $1`
 	catIssuer, err := tx.Exec(ctx, query, string(catIssuerId))
