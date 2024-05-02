@@ -91,7 +91,7 @@ func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId str
 
 	// check match status
 	if status == "approved" || status == "rejected" {
-		return exc.BadRequestException("Already in match")
+		return exc.BadRequestException("matchId is already approved / reject")
 	}
 
 	return nil
