@@ -50,9 +50,9 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 
 func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error) {
 	query := `SELECT m.id, 
-	json_build_object('name', u.name, 'email', u.email, 'createdAt', u.created_at) issuedBy, 
-	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', c1.created_at) matchCatDetail,
-	json_build_object('id', c2.id, 'name', c2.name, 'race', c2.race, 'sex', c2.sex, 'ageInMonth', c2.age_in_month, 'imageUrls', c2.image_urls, 'description', c2.description, 'hasMatched', c2.has_matched, 'createdAt', c2.created_at) userCatDetail,
+	json_build_object('name', u.name, 'email', u.email, 'createdAt', to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) issuedBy, 
+	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', to_char(c1.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) matchCatDetail,
+	json_build_object('id', c2.id, 'name', c2.name, 'race', c2.race, 'sex', c2.sex, 'ageInMonth', c2.age_in_month, 'imageUrls', c2.image_urls, 'description', c2.description, 'hasMatched', c2.has_matched, 'createdAt', to_char(c2.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) userCatDetail,
 	m.message,
 	to_char(m.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') createdAt
 	FROM matches m

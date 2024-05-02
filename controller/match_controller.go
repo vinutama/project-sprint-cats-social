@@ -41,5 +41,5 @@ func (controller *MatchController) Get(ctx *fiber.Ctx) error {
 		return exc.Exception(ctx, err)
 	}
 
-	return ctx.Status(fiber.StatusCreated).JSON(resp)
+	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
