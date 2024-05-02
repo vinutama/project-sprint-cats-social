@@ -32,10 +32,3 @@ type CatSearchResponse struct {
 	Messagge string                   `json:"message"`
 	Data     *[]CatSearchDataResponse `json:"data"`
 }
-type CatEditDataResponse struct {
-	Id string `json:"id"`
-}
-type CatEditResponse struct {
-	Message string               `json:"message"`
-	Data    *CatEditDataResponse `json:"data"`
-}

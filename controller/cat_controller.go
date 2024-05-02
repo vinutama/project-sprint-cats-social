@@ -61,16 +61,3 @@ func (controller *CatController) Search(ctx *fiber.Ctx) error {
 	}
 	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
-func (controller *CatController) EditCat(ctx *fiber.Ctx) error {
-	catReq := new(cat_entity.CatEditRequest)
-	if err := ctx.BodyParser(catReq); err != nil {
-		return err
-	}
-
-	resp, err := controller.CatService.EditCat(ctx, *catReq)
-	if err != nil {
-		return exc.Exception(ctx, err)
-	}
-
-	return ctx.Status(fiber.StatusOK).JSON(resp)
-}
