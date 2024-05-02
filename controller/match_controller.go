@@ -35,6 +35,15 @@ func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 }
 
+func (controller *MatchController) Get(ctx *fiber.Ctx) error {
+	resp, err := controller.MatchService.Get(ctx)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}
+
 func (controller *MatchController) Delete(ctx *fiber.Ctx) error {
 	matchParams := new(match_entity.MatchDeleteParams)
 	if err := ctx.ParamsParser(matchParams); err != nil {

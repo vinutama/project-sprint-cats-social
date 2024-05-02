@@ -57,6 +57,30 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 	return match_entity.MatchCreateResponse{
 		Message: "Cat Successfully matched",
 	}, nil
+}
+
+func (service *matchServiceImpl) Get(ctx *fiber.Ctx) (match_entity.MatchGetResponse, error) {
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return match_entity.MatchGetResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	defer tx.Rollback(userCtx)
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return match_entity.MatchGetResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+
+	data, err := matchRep.NewMatchRepository().Get(userCtx, tx, userId)
+	if err != nil {
+		return match_entity.MatchGetResponse{}, err
+	}
+
+	return match_entity.MatchGetResponse{
+		Message: "Successfully get matches",
+		Data:    &data,
+	}, nil
 
 }
 
