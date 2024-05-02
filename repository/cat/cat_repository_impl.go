@@ -107,6 +107,7 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 	if err != nil {
 		return []cat_entity.Cat{}, err
 	}
+	defer rows.Close()
 
 	cats, err := pgx.CollectRows(rows, pgx.RowToStructByName[cat_entity.Cat])
 	if err != nil {
