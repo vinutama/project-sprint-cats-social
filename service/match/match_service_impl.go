@@ -84,6 +84,6 @@ func (service *matchServiceImpl) Delete(ctx *fiber.Ctx, params match_entity.Matc
 	}
 
 	return match_entity.MatchDeleteResponse{
-		Message: "Match successfully deleted",
+		Message: "Match request successfully deleted",
 	}, nil
 }

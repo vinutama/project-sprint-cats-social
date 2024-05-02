@@ -86,7 +86,7 @@ func checkMatchStatus(ctx context.Context, tx pgx.Tx, matchId string, userId str
 
 	// check userId is the same with matchIssuerId or not
 	if userId != matchIssuerId {
-		return exc.ForbiddenException("Not allowed to delete this data")
+		return exc.ForbiddenException("Not allowed to delete match request")
 	}
 
 	// check match status
