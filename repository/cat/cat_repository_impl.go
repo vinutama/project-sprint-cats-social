@@ -112,7 +112,6 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 	if err != nil {
 		return []cat_entity.Cat{}, err
 	}
-	//test commit
 
 	return cats, nil
 }
