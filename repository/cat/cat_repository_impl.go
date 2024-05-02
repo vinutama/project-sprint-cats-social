@@ -55,7 +55,7 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	query := `Update cats set name=$1, race=$2, sex=$3,
 	age_in_month=$4, description=$5, image_urls=$6 where id=$7 and user_id=$8
 	returning id`
-	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, strings.Join(cat.ImageURLs, "||"), catId, ownerId).Scan(&catId2); err != nil {
+	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, ownerId).Scan(&catId2); err != nil {
 		tx.Rollback(ctx)
 		return cat_entity.Cat{}, err
 	}
