@@ -9,3 +9,7 @@ type MatchCreateRequest struct {
 type MatchApproveRequest struct {
 	MatchId string `json:"matchCatId" validate:"required"`
 }
+
+type MatchDeleteParams struct {
+	Id string `param:"id" validate:"required"`
+}

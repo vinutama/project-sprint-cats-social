@@ -5,8 +5,6 @@ import (
 	exc "cats-social/exceptions"
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,6 +51,53 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 	return match, nil
 }
 
+func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error) {
+	query := `SELECT m.id, 
+	json_build_object('name', u.name, 'email', u.email, 'createdAt', to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) issuedBy, 
+	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', to_char(c1.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) matchCatDetail,
+	json_build_object('id', c2.id, 'name', c2.name, 'race', c2.race, 'sex', c2.sex, 'ageInMonth', c2.age_in_month, 'imageUrls', c2.image_urls, 'description', c2.description, 'hasMatched', c2.has_matched, 'createdAt', to_char(c2.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) userCatDetail,
+	m.message,
+	to_char(m.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') createdAt
+	FROM matches m
+		JOIN cats c1 ON c1.id = m.cat_receiver_id
+		JOIN cats c2 ON c2.id = m.cat_issuer_id
+		JOIN users u ON u.id = c2.user_id
+	WHERE c1.user_id = $1 OR c2.user_id = $1
+	ORDER BY m.created_at DESC
+	`
+	rows, err := tx.Query(ctx, query, string(userId))
+	if err != nil {
+		return []match_entity.MatchGetDataResponse{}, err
+	}
+	defer rows.Close()
+
+	matches, err := pgx.CollectRows(rows, pgx.RowToStructByName[match_entity.MatchGetDataResponse])
+
+	if err != nil {
+		return []match_entity.MatchGetDataResponse{}, err
+	}
+
+	return matches, nil
+}
+
+func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+	err := checkMatchDeletionEligibility(ctx, tx, match.Id, userId)
+	if err != nil {
+		return err
+	}
+
+	query := `DELETE FROM matches WHERE id = $1`
+	if _, err = tx.Exec(ctx, query, match.Id); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
 	// check match id is exist
 	var catIssuerId, catReceiverId, status string
@@ -90,22 +135,9 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update cat: %s", err))
 	}
 
-	// search remaining other match both cats
-	remainMatchCatIssuerIds, err := getRemainingMatchCat(ctx, tx, catIssuerId)
-	if err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match issuer: %s", err))
-	}
-	remainMatchCatReceiverIds, err := getRemainingMatchCat(ctx, tx, catReceiverId)
-	if err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error when get remain match receiver: %s", err))
-	}
-	remainMatchIds := append(remainMatchCatIssuerIds, remainMatchCatReceiverIds...)
-
 	// delete if any remain match requested on both cats
-	if len(remainMatchIds) > 0 {
-		if err := deleteRemainingMatchCat(ctx, tx, remainMatchIds); err != nil {
-			return exc.InternalServerException(fmt.Sprintf("Internal server error when deleting remain match: %s", err))
-		}
+	if err := deleteRemainingMatchCat(ctx, tx, catIssuerId, catReceiverId); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when deleting remain match: %s", err))
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -116,70 +148,44 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 
 }
 
-func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error) {
-	query := `SELECT m.id, 
-	json_build_object('name', u.name, 'email', u.email, 'createdAt', to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) issuedBy, 
-	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', to_char(c1.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) matchCatDetail,
-	json_build_object('id', c2.id, 'name', c2.name, 'race', c2.race, 'sex', c2.sex, 'ageInMonth', c2.age_in_month, 'imageUrls', c2.image_urls, 'description', c2.description, 'hasMatched', c2.has_matched, 'createdAt', to_char(c2.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) userCatDetail,
-	m.message,
-	to_char(m.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') createdAt
-	FROM matches m
-		JOIN cats c1 ON c1.id = m.cat_receiver_id
-		JOIN cats c2 ON c2.id = m.cat_issuer_id
-		JOIN users u ON u.id = c2.user_id
-	WHERE c1.user_id = $1 OR c2.user_id = $1
-	ORDER BY m.created_at DESC
-	`
-	rows, err := tx.Query(ctx, query, string(userId))
-	if err != nil {
-		return []match_entity.MatchGetDataResponse{}, err
-	}
-	defer rows.Close()
-
-	matches, err := pgx.CollectRows(rows, pgx.RowToStructByName[match_entity.MatchGetDataResponse])
-
-	if err != nil {
-		return []match_entity.MatchGetDataResponse{}, err
-	}
-
-	return matches, nil
-}
-
 /********************* HELPER METHODS *******************************/
 
-func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, matchIds []string) error {
-	placeholders := make([]string, len(matchIds))
-	values := make([]interface{}, len(matchIds))
-	for i, matchId := range matchIds {
-		placeholders[i] = "$" + strconv.Itoa(i+1)
-		values[i] = matchId
+func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
+	var status string
+	var matchIssuerId string
+	query := `SELECT m.status, c.user_id FROM matches m 
+	JOIN cats c ON m.cat_issuer_id = c.id 
+	WHERE m.id = $1 and c.user_id = $2;`
+	err := tx.QueryRow(ctx, query, matchId, userId).Scan(&status, &matchIssuerId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return exc.NotFoundException("MatchId not found")
+		} else {
+			return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		}
 	}
 
-	query := fmt.Sprintf(`DELETE FROM matches WHERE id IN (%s)`, strings.Join(placeholders, ", "))
-	if _, err := tx.Exec(ctx, query, values...); err != nil {
-		return err
+	// check match status
+	if status != "requested" {
+		return exc.BadRequestException("matchId is already approved / reject")
 	}
+
 	return nil
 }
 
-func getRemainingMatchCat(ctx context.Context, tx pgx.Tx, catId string) ([]string, error) {
-	var matchCatIds []string
-	remainingMatchCatsQ := `SELECT id FROM matches WHERE (cat_issuer_id = $1 OR cat_receiver_id = $1) AND status = 'requested'`
-	rows, err := tx.Query(ctx, remainingMatchCatsQ, string(catId))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
+	query := `DELETE FROM matches
+		WHERE (
+			cat_issuer_id = $1 OR cat_receiver_id = $2 OR
+			cat_issuer_id = $2 OR cat_receiver_id = $1
+		) AND status = 'requested'
+	`
 
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		matchCatIds = append(matchCatIds, id)
+	// query := fmt.Sprintf(`DELETE FROM matches WHERE id IN (%s)`, strings.Join(placeholders, ", "))
+	if _, err := tx.Exec(ctx, query, catIssuerId, catReceiverId); err != nil {
+		return err
 	}
-
-	return matchCatIds, nil
+	return nil
 }
 
 func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
