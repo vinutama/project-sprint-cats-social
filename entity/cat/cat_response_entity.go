@@ -32,3 +32,11 @@ type CatSearchResponse struct {
 	Messagge string                   `json:"message"`
 	Data     *[]CatSearchDataResponse `json:"data"`
 }
+type CatDeleteDataResponse struct {
+	Id string `json:"id"`
+}
+
+type CatDeleteResponse struct {
+	Message string                 `json:"message"`
+	Data    *CatDeleteDataResponse `json:"data"`
+}

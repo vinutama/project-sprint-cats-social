@@ -11,4 +11,5 @@ type CatRepository interface {
 	Create(ctx context.Context, tx pgx.Tx, req cat_entity.Cat, ownerId string) (cat_entity.Cat, error)
 	Edit(ctx context.Context, tx pgx.Tx, req cat_entity.Cat, ownerId string, catId string) (cat_entity.Cat, error)
 	Search(ctx context.Context, tx pgx.Tx, req cat_entity.CatSearch) ([]cat_entity.Cat, error)
+	Delete(ctx context.Context, tx pgx.Tx, catId string, ownerId string) (cat_entity.Cat, error)
 }

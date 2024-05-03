@@ -62,3 +62,12 @@ func (controller *CatController) Search(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusOK).JSON(resp)
 }
+
+func (controller *CatController) Delete(ctx *fiber.Ctx) error {
+	resp, err := controller.CatService.Delete(ctx)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}

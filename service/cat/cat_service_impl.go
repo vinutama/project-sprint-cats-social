@@ -197,3 +197,34 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 		Data:     &data,
 	}, nil
 }
+
+func (service *CatServiceImpl) Delete(ctx *fiber.Ctx) (cat_entity.CatDeleteResponse, error) {
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return cat_entity.CatDeleteResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+
+	defer tx.Rollback(ctx.UserContext())
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return cat_entity.CatDeleteResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+
+	catId := ctx.Params("id")
+	deletedCat, err := catRep.NewCatRepository().Delete(userCtx, tx, catId, userId)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return cat_entity.CatDeleteResponse{}, exc.NotFoundException("Invalid user id")
+		}
+		return cat_entity.CatDeleteResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+
+	return cat_entity.CatDeleteResponse{
+		Message: "success",
+		Data: &cat_entity.CatDeleteDataResponse{
+			Id: deletedCat.Id,
+		},
+	}, nil
+
+}
