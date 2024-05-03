@@ -24,7 +24,7 @@ func NewMatchController(matchService match_service.MatchService, authService aut
 func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 	matchReq := new(match_entity.MatchCreateRequest)
 	if err := ctx.BodyParser(matchReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.MatchService.Create(ctx, *matchReq)
@@ -38,7 +38,7 @@ func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 func (controller *MatchController) Approve(ctx *fiber.Ctx) error {
 	matchApproveReq := new(match_entity.MatchActionRequest)
 	if err := ctx.BodyParser(matchApproveReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.MatchService.Approve(ctx, *matchApproveReq)
@@ -52,7 +52,7 @@ func (controller *MatchController) Approve(ctx *fiber.Ctx) error {
 func (controller *MatchController) Reject(ctx *fiber.Ctx) error {
 	matchRejectReq := new(match_entity.MatchActionRequest)
 	if err := ctx.BodyParser(matchRejectReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.MatchService.Reject(ctx, *matchRejectReq)

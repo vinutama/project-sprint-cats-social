@@ -63,6 +63,7 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 		JOIN cats c2 ON c2.id = m.cat_issuer_id
 		JOIN users u ON u.id = c2.user_id
 	WHERE c1.user_id = $1 OR c2.user_id = $1
+		AND m.status = 'requested'
 	ORDER BY m.created_at DESC
 	`
 	rows, err := tx.Query(ctx, query, string(userId))
