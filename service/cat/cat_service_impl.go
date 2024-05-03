@@ -152,7 +152,7 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 	}
 
 	if searchQueries.AgeInMonth != "" {
-		if strings.Contains(searchQueries.AgeInMonth, ">") || strings.Contains(searchQueries.AgeInMonth, "<") {
+		if strings.Contains(searchQueries.AgeInMonth, ">") || strings.Contains(searchQueries.AgeInMonth, "<") || strings.Contains(searchQueries.AgeInMonth, "=") {
 			age, _ := strconv.Atoi(searchQueries.AgeInMonth[1:len(searchQueries.AgeInMonth)])
 
 			cat.AgeCondition = fmt.Sprintf("%c", searchQueries.AgeInMonth[0])
