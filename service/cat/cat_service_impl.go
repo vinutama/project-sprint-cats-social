@@ -104,7 +104,7 @@ func (service *CatServiceImpl) EditCat(ctx *fiber.Ctx, req cat_entity.CatEditReq
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatEditResponse{}, exc.NotFoundException("User/Cat id is not found/match")
 		}
-		return cat_entity.CatEditResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+		return cat_entity.CatEditResponse{}, err
 	}
 
 	return cat_entity.CatEditResponse{
