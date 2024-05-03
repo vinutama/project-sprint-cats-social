@@ -148,6 +148,38 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 
 }
 
+func (repository *matchRepositoryImpl) Reject(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+	// check match id is exist
+	var catIssuerId, catReceiverId, status, ownerReceiverId string
+	query := "SELECT cat_issuer_id, cat_receiver_id, status, c.user_id ownerReceiverId FROM matches m JOIN cats c ON c.id = m.cat_receiver_id WHERE m.id = $1 LIMIT 1"
+	if err := tx.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status, &ownerReceiverId); err != nil {
+		if err == pgx.ErrNoRows {
+			return exc.NotFoundException("Match id is not found")
+		}
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+	// check match id is valid or not based on status
+	if status != "requested" {
+		return exc.BadRequestException("Match id is no longer valid")
+	}
+
+	if ownerReceiverId != userId {
+		return exc.UnauthorizedException("You cannot reject that cat you are not belong")
+	}
+
+	// update status match to rejected
+	rejectQuery := `UPDATE matches SET status = $1 WHERE id = $2`
+	if _, err := tx.Exec(ctx, rejectQuery, "rejected", string(match.Id)); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+	}
+
+	return nil
+
+}
 /********************* HELPER METHODS *******************************/
 
 func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
