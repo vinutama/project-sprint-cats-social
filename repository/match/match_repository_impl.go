@@ -181,6 +181,7 @@ func (repository *matchRepositoryImpl) Reject(ctx context.Context, tx pgx.Tx, ma
 	return nil
 
 }
+
 /********************* HELPER METHODS *******************************/
 
 func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
@@ -259,7 +260,7 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 	if isAlreadyRequestMatch {
-		return exc.ConflictException("Your cat has already request match to this cat")
+		return exc.BadRequestException("Your cat has already request match to this cat")
 	}
 
 	query := `SELECT sex, has_matched, user_id FROM cats WHERE id = $1`
@@ -278,7 +279,7 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 	switch {
 	// check cat owner
 	case catIssuerUserId != userId:
-		return exc.UnauthorizedException("You cannot match a cat that you do not own!")
+		return exc.NotFoundException("You cannot match a cat that you do not own!")
 	// check cat issuer and receiver cannot from the same owner
 	case catIssuerUserId == catReceiverUserId:
 		return exc.BadRequestException("Match cannot be made from the same cat's owner!")
