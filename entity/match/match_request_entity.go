@@ -6,6 +6,10 @@ type MatchCreateRequest struct {
 	Message    string `json:"message" validate:"required,min=5,max=120"`
 }
 
+type MatchActionRequest struct {
+	MatchId string `json:"matchId" validate:"required"`
+}
+
 type MatchDeleteParams struct {
 	Id string `param:"id" validate:"required"`
 }

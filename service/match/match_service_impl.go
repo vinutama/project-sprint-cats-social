@@ -50,12 +50,75 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 		CatReceiverId: req.MatchCatId,
 	}
 
-	if err := matchRep.NewMatchRepository().Create(userCtx, tx, match, userId); err != nil {
+	matchRegistered, err := matchRep.NewMatchRepository().Create(userCtx, tx, match, userId)
+	if err != nil {
 		return match_entity.MatchCreateResponse{}, err
 	}
 
 	return match_entity.MatchCreateResponse{
-		Message: "Cat Successfully matched",
+		Message: "Match request success, waiting for response from receiver",
+		Data: &match_entity.MatchCreateDataResponse{
+			Id:        matchRegistered.Id,
+			CreatedAt: matchRegistered.CreatedAt,
+		},
+	}, nil
+}
+
+func (service *matchServiceImpl) Approve(ctx *fiber.Ctx, req match_entity.MatchActionRequest) (match_entity.MatchActionResponse, error) {
+	if err := service.Validator.Struct(req); err != nil {
+		return match_entity.MatchActionResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
+	}
+
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return match_entity.MatchActionResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	defer tx.Rollback(userCtx)
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return match_entity.MatchActionResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+	match := match_entity.Match{
+		Id: req.MatchId,
+	}
+
+	if err := matchRep.NewMatchRepository().Approve(userCtx, tx, match, userId); err != nil {
+		return match_entity.MatchActionResponse{}, err
+	}
+
+	return match_entity.MatchActionResponse{
+		Message: "Congratulations your cat is matched!",
+	}, nil
+}
+
+func (service *matchServiceImpl) Reject(ctx *fiber.Ctx, req match_entity.MatchActionRequest) (match_entity.MatchActionResponse, error) {
+	if err := service.Validator.Struct(req); err != nil {
+		return match_entity.MatchActionResponse{}, exc.BadRequestException(fmt.Sprintf("%s", err))
+	}
+
+	userCtx := ctx.UserContext()
+	tx, err := service.DBPool.Begin(userCtx)
+	if err != nil {
+		return match_entity.MatchActionResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	defer tx.Rollback(userCtx)
+
+	userId, err := authService.NewAuthService().GetValidUser(ctx)
+	if err != nil {
+		return match_entity.MatchActionResponse{}, exc.UnauthorizedException("Unauthorized")
+	}
+	match := match_entity.Match{
+		Id: req.MatchId,
+	}
+
+	if err := matchRep.NewMatchRepository().Reject(userCtx, tx, match, userId); err != nil {
+		return match_entity.MatchActionResponse{}, err
+	}
+
+	return match_entity.MatchActionResponse{
+		Message: "Successfully rejected the match request",
 	}, nil
 }
 

@@ -35,6 +35,34 @@ func (controller *MatchController) Create(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(resp)
 }
 
+func (controller *MatchController) Approve(ctx *fiber.Ctx) error {
+	matchApproveReq := new(match_entity.MatchActionRequest)
+	if err := ctx.BodyParser(matchApproveReq); err != nil {
+		return err
+	}
+
+	resp, err := controller.MatchService.Approve(ctx, *matchApproveReq)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (controller *MatchController) Reject(ctx *fiber.Ctx) error {
+	matchRejectReq := new(match_entity.MatchActionRequest)
+	if err := ctx.BodyParser(matchRejectReq); err != nil {
+		return err
+	}
+
+	resp, err := controller.MatchService.Reject(ctx, *matchRejectReq)
+	if err != nil {
+		return exc.Exception(ctx, err)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(resp)
+}
+
 func (controller *MatchController) Get(ctx *fiber.Ctx) error {
 	resp, err := controller.MatchService.Get(ctx)
 	if err != nil {

@@ -49,6 +49,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	// Cats API
 	catApi := app.Group("/v1/cat")
 	catApi.Post("/", catController.Create)
+	catApi.Put("/:id", catController.EditCat)
 	catApi.Get("/", catController.Search)
 	catApi.Delete("/:id", catController.Delete)
 
@@ -56,5 +57,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	matchApi := catApi.Group("/match")
 	matchApi.Post("/", matchController.Create)
 	matchApi.Get("/", matchController.Get)
+	matchApi.Post("/approve", matchController.Approve)
+	matchApi.Post("/reject", matchController.Reject)
 	matchApi.Delete("/:id", matchController.Delete)
 }
