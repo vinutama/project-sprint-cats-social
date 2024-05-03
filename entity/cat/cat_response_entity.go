@@ -9,6 +9,13 @@ type CatCreateResponse struct {
 	Data    *CatCreateDataResponse `json:"data"`
 }
 
+type CatEditDataResponse struct {
+	Id string `json:"id"`
+}
+type CatEditResponse struct {
+	Message string               `json:"message"`
+	Data    *CatEditDataResponse `json:"data"`
+}
 type CatSearchDataResponse struct {
 	Id          string   `json:"id"`
 	Name        string   `json:"name"`

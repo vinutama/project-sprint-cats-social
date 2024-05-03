@@ -11,6 +11,8 @@ services:
     volumes:
       - .:/usr/src/app
     command: air main.go -b 0.0.0.0
+    networks:
+      - cats
   db:
     container_name: cats-db
     image: postgres:alpine
@@ -22,7 +24,10 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - postgres-db:/var/lib/postgres/data
+      - ./db-data:/var/lib/postgres/data
+    networks:
+      - cats
 
-volumes:
-  postgres-db:
+networks:
+  cats:
+    external: true
