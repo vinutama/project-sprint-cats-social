@@ -6,7 +6,6 @@ import (
 	auth_service "cats-social/service/auth"
 	user_service "cats-social/service/user"
 
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -40,7 +39,7 @@ func (controller *UserController) Login(ctx *fiber.Ctx) error {
 	if err := ctx.BodyParser(userReq); err != nil {
 		return exc.BadRequestException("Failed to parse request body")
 	}
-	fmt.Println(userReq)
+
 	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
 	if err != nil {
 		return exc.Exception(ctx, err)

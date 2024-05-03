@@ -131,10 +131,11 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 		return cat_entity.CatSearchResponse{}, exc.UnauthorizedException("Unauthorized")
 	}
 
-	if strings.ToLower(searchQueries.HasMatched) != "true" || strings.ToLower(searchQueries.HasMatched) != "false" {
+	if strings.ToLower(searchQueries.HasMatched) != "true" && strings.ToLower(searchQueries.HasMatched) != "false" {
 		searchQueries.HasMatched = ""
 	}
-	if strings.ToLower(searchQueries.Owned) != "true" || strings.ToLower(searchQueries.Owned) != "false" {
+
+	if strings.ToLower(searchQueries.Owned) != "true" && strings.ToLower(searchQueries.Owned) != "false" {
 		searchQueries.Owned = ""
 	}
 
