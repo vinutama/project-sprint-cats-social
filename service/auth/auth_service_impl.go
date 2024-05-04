@@ -1,13 +1,13 @@
 package auth_service
 
 import (
-	cfg "cats-social/config"
 	helpers "cats-social/helpers"
 	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/spf13/viper"
 )
 
 // 8 hours
@@ -27,7 +27,7 @@ func (service *AuthServiceImpl) GenerateToken(ctx context.Context, userId string
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtconf)
-	signToken, err := token.SignedString([]byte(cfg.EnvConfigs.JwtSecret))
+	signToken, err := token.SignedString([]byte(viper.GetString("JWT_SECRET")))
 	if err != nil {
 		return "", err
 	}

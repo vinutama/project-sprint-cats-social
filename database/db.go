@@ -1,22 +1,22 @@
 package database
 
 import (
-	cfg "cats-social/config"
 	"context"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/spf13/viper"
 )
 
 var (
-	dbName            = cfg.EnvConfigs.DbName
-	dbHost            = cfg.EnvConfigs.DbHost
-	dbPass            = cfg.EnvConfigs.DbPassword
-	dbUser            = cfg.EnvConfigs.DbUser
-	dbPort            = cfg.EnvConfigs.DbPort
-	dbParams            = cfg.EnvConfigs.DbParams
+	dbName            = viper.GetString("DB_NAME")
+	dbHost            = viper.GetString("DB_HOST")
+	dbPass            = viper.GetString("DB_PASSWORD")
+	dbUser            = viper.GetString("DB_USERNAME")
+	dbPort            = viper.GetString("DB_PORT")
+	dbParams          = viper.GetString("DB_PARAMS")
 	dbTimeout         = 30 * time.Second
 	dbMaxConnLifeTime = 60 * time.Minute
 	dbMaxConnIdleTime = 5 * time.Minute
