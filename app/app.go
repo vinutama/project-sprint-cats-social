@@ -22,9 +22,9 @@ func StartApp() {
 
 	dbPool := database.GetConnPool()
 	// Temporary helper to initiate tables
-	if err := database.InitiateTables(dbPool); err != nil {
-		log.Fatal("Error when initializing tables:", err)
-	}
+	// if err := database.InitiateTables(dbPool); err != nil {
+	// 	log.Fatal("Error when initializing tables:", err)
+	// }
 	defer dbPool.Close()
 	app.Use(logger.New())
 	// Register BP

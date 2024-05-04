@@ -16,6 +16,7 @@ type envConfigs struct {
 	DbName     string `mapstructure:"DB_NAME"`
 	DbHost     string `mapstructure:"DB_HOST"`
 	DbUser     string `mapstructure:"DB_USERNAME"`
+	DbParams     string `mapstructure:"DB_Params"`
 	DbPassword string `mapstructure:"DB_PASSWORD"`
 	DbPort     string `mapstructure:"DB_PORT"`
 	BcryptSalt string `mapstructure:"BCRYPT_SALT"`

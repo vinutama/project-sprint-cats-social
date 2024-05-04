@@ -16,15 +16,16 @@ var (
 	dbPass            = cfg.EnvConfigs.DbPassword
 	dbUser            = cfg.EnvConfigs.DbUser
 	dbPort            = cfg.EnvConfigs.DbPort
+	dbParams            = cfg.EnvConfigs.DbParams
 	dbTimeout         = 30 * time.Second
 	dbMaxConnLifeTime = 60 * time.Minute
 	dbMaxConnIdleTime = 5 * time.Minute
-	dbMaxConn         = int32(100)
+	dbMaxConn         = int32(3000)
 	dbMinConn         = int32(0)
 )
 
 func GetConnPool() *pgxpool.Pool {
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbUser, dbPass, dbHost, dbPort, dbName)
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?%s", dbUser, dbPass, dbHost, dbPort, dbName, dbParams)
 	cfg, err := pgxpool.ParseConfig(dbURL)
 	if err != nil {
 		log.Fatal("Error when parsing config DB URL: ", err)
