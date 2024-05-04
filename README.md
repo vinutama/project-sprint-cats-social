@@ -28,3 +28,4 @@ if you're running this for the first time, do:
 - Golang >1.21.0
 - Go Fiber
 - Postgres
+- Docker
