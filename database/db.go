@@ -18,8 +18,8 @@ var (
 	dbPort            = viper.GetString("DB_PORT")
 	dbParams          = viper.GetString("DB_PARAMS")
 	dbTimeout         = 30 * time.Second
-	dbMaxConnLifeTime = 60 * time.Minute
-	dbMaxConnIdleTime = 5 * time.Minute
+	dbMaxConnLifeTime = 2 * time.Minute
+	dbMaxConnIdleTime = 5 * time.Second
 	dbMaxConn         = int32(3000)
 	dbMinConn         = int32(0)
 )

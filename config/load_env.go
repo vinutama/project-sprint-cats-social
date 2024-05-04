@@ -9,7 +9,7 @@ import (
 var EnvConfigs *envConfigs
 
 func init() {
-	// EnvConfigs = loadENV()
+	EnvConfigs = loadENV()
 }
 
 type envConfigs struct {
@@ -24,13 +24,13 @@ type envConfigs struct {
 }
 
 func loadENV() (config *envConfigs) {
-	viper.SetConfigFile("cats-social.env")
-	viper.AddConfigPath(".")
+	// viper.SetConfigFile("cats-social.env")
+	// viper.AddConfigPath(".")
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Error when reading env file", err)
-	}
+	// if err := viper.ReadInConfig(); err != nil {
+	// 	log.Fatal("Error when reading env file", err)
+	// }
 
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal(err)
