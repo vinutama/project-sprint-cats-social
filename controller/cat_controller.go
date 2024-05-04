@@ -24,7 +24,7 @@ func NewCatController(catService cat_service.CatService, authService auth_servic
 func (controller *CatController) Create(ctx *fiber.Ctx) error {
 	catReq := new(cat_entity.CatCreateRequest)
 	if err := ctx.BodyParser(catReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.CatService.Create(ctx, *catReq)
@@ -38,7 +38,7 @@ func (controller *CatController) Create(ctx *fiber.Ctx) error {
 func (controller *CatController) EditCat(ctx *fiber.Ctx) error {
 	catReq := new(cat_entity.CatEditRequest)
 	if err := ctx.BodyParser(catReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.CatService.EditCat(ctx, *catReq)

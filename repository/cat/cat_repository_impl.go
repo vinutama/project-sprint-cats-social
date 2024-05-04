@@ -2,6 +2,7 @@ package cat_repository
 
 import (
 	cat_entity "cats-social/entity/cat"
+	exc "cats-social/exceptions"
 	"context"
 	"fmt"
 	"strconv"
@@ -120,10 +121,14 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	//  first we check whether the cat is already match(someone request to match) or not(no catfishing, pun intended)
 	var matchCatSex string
 	match_query := `Select cats.sex from matches join cats on cats.id=$1 where cat_issuer_id=$1 or cat_receiver_id=$1 and status!='rejected';`
-	tx.QueryRow(ctx, match_query, catId).Scan(&matchCatSex)
+	if err := tx.QueryRow(ctx, match_query, catId).Scan(&matchCatSex); err != nil {
+		if err != pgx.ErrNoRows {
+			return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
+		}
+	}
 
 	if matchCatSex != "" {
-		cat.Sex = matchCatSex
+		return cat_entity.Cat{}, exc.BadRequestException("Cannot change gender when cat already match")
 	}
 
 	var catId2 string
@@ -133,7 +138,7 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	returning id`
 	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, catId, ownerId).Scan(&catId2); err != nil {
 		tx.Rollback(ctx)
-		return cat_entity.Cat{}, err
+		return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
 	cat.Id = catId
@@ -141,7 +146,7 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	cat.HasMatched = false
 
 	if err := tx.Commit(ctx); err != nil {
-		return cat_entity.Cat{}, err
+		return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
 	return cat, nil

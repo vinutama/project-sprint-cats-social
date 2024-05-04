@@ -22,7 +22,7 @@ type CatSearchQuery struct {
 	Race       string `query:"race" validate:"omitempty"`
 	Sex        string `query:"sex" validate:"omitempty"`
 	HasMatched string `query:"hasMatched" validate:"omitempty"`
-	AgeInMonth string `query:"ageInMonth" validate:"omitempty,regex=^([<>]?)\\d+$"`
+	AgeInMonth string `query:"ageInMonth" validate:"omitempty,regex=^([<>=]?)\\d+$"`
 	Owned      string `query:"owned" validate:"omitempty"`
 	Search     string `query:"search"`
 	Limit      string `query:"limit" validate:"omitempty,number,min=0"`

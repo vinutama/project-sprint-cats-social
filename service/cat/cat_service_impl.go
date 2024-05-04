@@ -104,7 +104,7 @@ func (service *CatServiceImpl) EditCat(ctx *fiber.Ctx, req cat_entity.CatEditReq
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatEditResponse{}, exc.NotFoundException("User/Cat id is not found/match")
 		}
-		return cat_entity.CatEditResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
+		return cat_entity.CatEditResponse{}, err
 	}
 
 	return cat_entity.CatEditResponse{
@@ -131,10 +131,11 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 		return cat_entity.CatSearchResponse{}, exc.UnauthorizedException("Unauthorized")
 	}
 
-	if strings.ToLower(searchQueries.HasMatched) != "true" || strings.ToLower(searchQueries.HasMatched) != "false" {
+	if strings.ToLower(searchQueries.HasMatched) != "true" && strings.ToLower(searchQueries.HasMatched) != "false" {
 		searchQueries.HasMatched = ""
 	}
-	if strings.ToLower(searchQueries.Owned) != "true" || strings.ToLower(searchQueries.Owned) != "false" {
+
+	if strings.ToLower(searchQueries.Owned) != "true" && strings.ToLower(searchQueries.Owned) != "false" {
 		searchQueries.Owned = ""
 	}
 
@@ -152,7 +153,7 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 	}
 
 	if searchQueries.AgeInMonth != "" {
-		if strings.Contains(searchQueries.AgeInMonth, ">") || strings.Contains(searchQueries.AgeInMonth, "<") {
+		if strings.Contains(searchQueries.AgeInMonth, ">") || strings.Contains(searchQueries.AgeInMonth, "<") || strings.Contains(searchQueries.AgeInMonth, "=") {
 			age, _ := strconv.Atoi(searchQueries.AgeInMonth[1:len(searchQueries.AgeInMonth)])
 
 			cat.AgeCondition = fmt.Sprintf("%c", searchQueries.AgeInMonth[0])

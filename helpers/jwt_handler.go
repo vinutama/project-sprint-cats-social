@@ -1,15 +1,14 @@
 package helpers
 
 import (
-	cfg "cats-social/config"
-
 	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/spf13/viper"
 )
 
 func GetTokenHandler() fiber.Handler {
 	return jwtware.New(jwtware.Config{
-		SigningKey: jwtware.SigningKey{Key: []byte(cfg.EnvConfigs.JwtSecret)},
+		SigningKey: jwtware.SigningKey{Key: []byte(viper.GetString("JWT_SECRET"))},
 		ContextKey: JwtContextKey,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			return fiber.NewError(fiber.StatusForbidden, err.Error())

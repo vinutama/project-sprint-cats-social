@@ -24,7 +24,7 @@ func NewUserController(userService user_service.UserService, authService auth_se
 func (controller *UserController) Register(ctx *fiber.Ctx) error {
 	userReq := new(user_entity.UserRegisterRequest)
 	if err := ctx.BodyParser(userReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 	resp, err := controller.UserService.Register(ctx.UserContext(), *userReq)
 	if err != nil {
@@ -37,7 +37,7 @@ func (controller *UserController) Register(ctx *fiber.Ctx) error {
 func (controller *UserController) Login(ctx *fiber.Ctx) error {
 	userReq := new(user_entity.UserLoginRequest)
 	if err := ctx.BodyParser(userReq); err != nil {
-		return err
+		return exc.BadRequestException("Failed to parse request body")
 	}
 
 	resp, err := controller.UserService.Login(ctx.UserContext(), *userReq)
