@@ -20,7 +20,7 @@ var (
 	dbTimeout         = 30 * time.Second
 	dbMaxConnLifeTime = 2 * time.Minute
 	dbMaxConnIdleTime = 5 * time.Second
-	dbMaxConn         = int32(3000)
+	dbMaxConn         = int32(100)
 	dbMinConn         = int32(0)
 )
 
