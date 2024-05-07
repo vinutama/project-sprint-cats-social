@@ -3,7 +3,6 @@ package controller
 import (
 	user_entity "cats-social/entity/user"
 	exc "cats-social/exceptions"
-	auth_service "cats-social/service/auth"
 	user_service "cats-social/service/user"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,13 +10,11 @@ import (
 
 type UserController struct {
 	UserService user_service.UserService
-	AuthService auth_service.AuthService
 }
 
-func NewUserController(userService user_service.UserService, authService auth_service.AuthService) UserController {
+func NewUserController(userService user_service.UserService) UserController {
 	return UserController{
 		UserService: userService,
-		AuthService: authService,
 	}
 }
 

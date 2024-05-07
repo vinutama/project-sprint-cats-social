@@ -11,37 +11,26 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserServiceImpl struct {
+type userServiceImpl struct {
 	UserRepository userRep.UserRepository
-	DBPool         *pgxpool.Pool
-	AuthService    authService.AuthService
 	Validator      *validator.Validate
 }
 
-func NewUserService(userRepository userRep.UserRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) UserService {
-	return &UserServiceImpl{
+func NewUserService(userRepository userRep.UserRepository, validator *validator.Validate) UserService {
+	return &userServiceImpl{
 		UserRepository: userRepository,
-		DBPool:         dbPool,
-		AuthService:    authService,
 		Validator:      validator,
 	}
 }
 
-func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.UserRegisterRequest) (user_entity.UserRegisterResponse, error) {
+func (service *userServiceImpl) Register(ctx context.Context, req user_entity.UserRegisterRequest) (user_entity.UserRegisterResponse, error) {
 	// validate by rule we defined in _request_entity.go
 	if err := service.Validator.Struct(req); err != nil {
 		return user_entity.UserRegisterResponse{}, exc.BadRequestException(fmt.Sprintf("Bad request: %s", err))
 	}
-
-	tx, err := service.DBPool.Begin(ctx)
-	if err != nil {
-		return user_entity.UserRegisterResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(ctx)
 
 	hashPassword, err := helpers.HashPassword(req.Password)
 	if err != nil {
@@ -53,7 +42,7 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 		Email:    req.Email,
 		Password: hashPassword,
 	}
-	userRegistered, err := userRep.NewUserRepository().Register(ctx, tx, user)
+	userRegistered, err := service.UserRepository.Register(ctx, user)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") {
 			return user_entity.UserRegisterResponse{}, exc.ConflictException("User with this email already registered")
@@ -76,22 +65,16 @@ func (service *UserServiceImpl) Register(ctx context.Context, req user_entity.Us
 	}, nil
 }
 
-func (service *UserServiceImpl) Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error) {
+func (service *userServiceImpl) Login(ctx context.Context, req user_entity.UserLoginRequest) (user_entity.UserLoginResponse, error) {
 	if err := service.Validator.Struct(req); err != nil {
 		return user_entity.UserLoginResponse{}, exc.BadRequestException(fmt.Sprintf("Bad request: %s", err))
 	}
-
-	tx, err := service.DBPool.Begin(ctx)
-	if err != nil {
-		return user_entity.UserLoginResponse{}, err
-	}
-	defer tx.Rollback(ctx)
 
 	user := user_entity.User{
 		Email: req.Email,
 	}
 
-	userLogin, err := userRep.NewUserRepository().Login(ctx, tx, user)
+	userLogin, err := service.UserRepository.Login(ctx, user)
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return user_entity.UserLoginResponse{}, exc.NotFoundException("User is not found")

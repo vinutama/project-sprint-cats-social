@@ -3,7 +3,6 @@ package controller
 import (
 	match_entity "cats-social/entity/match"
 	exc "cats-social/exceptions"
-	auth_service "cats-social/service/auth"
 	match_service "cats-social/service/match"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,13 +10,11 @@ import (
 
 type MatchController struct {
 	MatchService match_service.MatchService
-	AuthService  auth_service.AuthService
 }
 
-func NewMatchController(matchService match_service.MatchService, authService auth_service.AuthService) MatchController {
+func NewMatchController(matchService match_service.MatchService) MatchController {
 	return MatchController{
 		MatchService: matchService,
-		AuthService:  authService,
 	}
 }
 

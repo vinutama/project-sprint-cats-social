@@ -8,20 +8,24 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type matchRepositoryImpl struct {
+	DBPool *pgxpool.Pool
 }
 
-func NewMatchRepository() MatchRepository {
-	return &matchRepositoryImpl{}
+func NewMatchRepository(dbPool *pgxpool.Pool) MatchRepository {
+	return &matchRepositoryImpl{
+		DBPool: dbPool,
+	}
 }
 
-func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) (match_entity.Match, error) {
-	if err := checkCatExists(ctx, tx, match.CatIssuerId, match.CatReceiverId); err != nil {
+func (repository *matchRepositoryImpl) Create(ctx context.Context, match match_entity.Match, userId string) (match_entity.Match, error) {
+	if err := repository.checkCatExists(ctx, match.CatIssuerId, match.CatReceiverId); err != nil {
 		return match_entity.Match{}, err
 	}
-	if err := validateMatchCatCriteria(ctx, tx, match.CatIssuerId, match.CatReceiverId, userId); err != nil {
+	if err := repository.validateMatchCatCriteria(ctx, match.CatIssuerId, match.CatReceiverId, userId); err != nil {
 		return match_entity.Match{}, err
 	}
 
@@ -35,8 +39,7 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 	)
 	RETURNING id, created_at;
 	`
-	if err := tx.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId, string(userId)).Scan(&matchId, &createdAt); err != nil {
-		tx.Rollback(ctx)
+	if err := repository.DBPool.QueryRow(ctx, query, match.Message, match.CatIssuerId, match.CatReceiverId, string(userId)).Scan(&matchId, &createdAt); err != nil {
 		if err == pgx.ErrNoRows {
 			return match_entity.Match{}, exc.BadRequestException("Invalid user id")
 		}
@@ -45,13 +48,10 @@ func (repository *matchRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, ma
 
 	match.Id = matchId
 	match.CreatedAt = createdAt.Format(time.RFC3339)
-	if err := tx.Commit(ctx); err != nil {
-		return match_entity.Match{}, err
-	}
 	return match, nil
 }
 
-func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userId string) ([]match_entity.MatchGetDataResponse, error) {
+func (repository *matchRepositoryImpl) Get(ctx context.Context, userId string) ([]match_entity.MatchGetDataResponse, error) {
 	query := `SELECT m.id, 
 	json_build_object('name', u.name, 'email', u.email, 'createdAt', to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) issuedBy, 
 	json_build_object('id', c1.id, 'name', c1.name, 'race', c1.race, 'sex', c1.sex, 'ageInMonth', c1.age_in_month, 'imageUrls', c1.image_urls, 'description', c1.description, 'hasMatched', c1.has_matched, 'createdAt', to_char(c1.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')) matchCatDetail,
@@ -66,7 +66,7 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 		AND m.status = 'requested'
 	ORDER BY m.created_at DESC
 	`
-	rows, err := tx.Query(ctx, query, string(userId))
+	rows, err := repository.DBPool.Query(ctx, query, string(userId))
 	if err != nil {
 		return []match_entity.MatchGetDataResponse{}, err
 	}
@@ -81,29 +81,24 @@ func (repository *matchRepositoryImpl) Get(ctx context.Context, tx pgx.Tx, userI
 	return matches, nil
 }
 
-func (repository *matchRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
-	err := checkMatchDeletionEligibility(ctx, tx, match.Id, userId)
+func (repository *matchRepositoryImpl) Delete(ctx context.Context, match match_entity.Match, userId string) error {
+	err := repository.checkMatchDeletionEligibility(ctx, match.Id, userId)
 	if err != nil {
 		return err
 	}
 
 	query := `DELETE FROM matches WHERE id = $1`
-	if _, err = tx.Exec(ctx, query, match.Id); err != nil {
+	if _, err = repository.DBPool.Exec(ctx, query, match.Id); err != nil {
 		return err
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+func (repository *matchRepositoryImpl) Approve(ctx context.Context, match match_entity.Match, userId string) error {
 	// check match id is exist
 	var catIssuerId, catReceiverId, status string
 	query := "SELECT cat_issuer_id, cat_receiver_id, status FROM matches WHERE id = $1 LIMIT 1"
-	if err := tx.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status); err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("Match id is not found")
 		}
@@ -117,7 +112,7 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 	// check owner cat id
 	var ownerReceiverId string
 	checkOwnerReceiverCatQ := `SELECT user_id FROM cats WHERE id = $1`
-	if err := tx.QueryRow(ctx, checkOwnerReceiverCatQ, string(catReceiverId)).Scan(&ownerReceiverId); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, checkOwnerReceiverCatQ, string(catReceiverId)).Scan(&ownerReceiverId); err != nil {
 		exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 	if ownerReceiverId != userId {
@@ -126,34 +121,29 @@ func (repository *matchRepositoryImpl) Approve(ctx context.Context, tx pgx.Tx, m
 
 	// update status match to approved
 	approveQuery := `UPDATE matches SET status = $1 WHERE id = $2`
-	if _, err := tx.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
+	if _, err := repository.DBPool.Exec(ctx, approveQuery, "approved", string(match.Id)); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
 	}
 
 	// update has_matched both cats to true
 	updateCatQuery := `UPDATE cats SET has_matched = $1 WHERE id IN ($2, $3)`
-	if _, err := tx.Exec(ctx, updateCatQuery, true, catIssuerId, catReceiverId); err != nil {
+	if _, err := repository.DBPool.Exec(ctx, updateCatQuery, true, catIssuerId, catReceiverId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update cat: %s", err))
 	}
 
 	// delete if any remain match requested on both cats
-	if err := deleteRemainingMatchCat(ctx, tx, catIssuerId, catReceiverId); err != nil {
+	if err := repository.deleteRemainingMatchCat(ctx, catIssuerId, catReceiverId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when deleting remain match: %s", err))
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
-	}
-
 	return nil
 
 }
 
-func (repository *matchRepositoryImpl) Reject(ctx context.Context, tx pgx.Tx, match match_entity.Match, userId string) error {
+func (repository *matchRepositoryImpl) Reject(ctx context.Context, match match_entity.Match, userId string) error {
 	// check match id is exist
 	var catIssuerId, catReceiverId, status, ownerReceiverId string
 	query := "SELECT cat_issuer_id, cat_receiver_id, status, c.user_id ownerReceiverId FROM matches m JOIN cats c ON c.id = m.cat_receiver_id WHERE m.id = $1 LIMIT 1"
-	if err := tx.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status, &ownerReceiverId); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, query, string(match.Id)).Scan(&catIssuerId, &catReceiverId, &status, &ownerReceiverId); err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("Match id is not found")
 		}
@@ -170,27 +160,22 @@ func (repository *matchRepositoryImpl) Reject(ctx context.Context, tx pgx.Tx, ma
 
 	// update status match to rejected
 	rejectQuery := `UPDATE matches SET status = $1 WHERE id = $2`
-	if _, err := tx.Exec(ctx, rejectQuery, "rejected", string(match.Id)); err != nil {
+	if _, err := repository.DBPool.Exec(ctx, rejectQuery, "rejected", string(match.Id)); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error when update match: %s", err))
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
-	}
-
 	return nil
 
 }
 
 /********************* HELPER METHODS *******************************/
 
-func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId string, userId string) error {
+func (repository *matchRepositoryImpl) checkMatchDeletionEligibility(ctx context.Context, matchId string, userId string) error {
 	var status string
 	var matchIssuerId string
 	query := `SELECT m.status, c.user_id FROM matches m 
 	JOIN cats c ON m.cat_issuer_id = c.id 
 	WHERE m.id = $1 and c.user_id = $2;`
-	err := tx.QueryRow(ctx, query, matchId, userId).Scan(&status, &matchIssuerId)
+	err := repository.DBPool.QueryRow(ctx, query, matchId, userId).Scan(&status, &matchIssuerId)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("MatchId not found")
@@ -207,22 +192,22 @@ func checkMatchDeletionEligibility(ctx context.Context, tx pgx.Tx, matchId strin
 	return nil
 }
 
-func deleteRemainingMatchCat(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
+func (repository *matchRepositoryImpl) deleteRemainingMatchCat(ctx context.Context, catIssuerId string, catReceiverId string) error {
 	query := `DELETE FROM matches
 		WHERE (
 			cat_issuer_id = $1 OR cat_receiver_id = $2 OR
 			cat_issuer_id = $2 OR cat_receiver_id = $1
 		) AND status = 'requested'
 	`
-	if _, err := tx.Exec(ctx, query, catIssuerId, catReceiverId); err != nil {
+	if _, err := repository.DBPool.Exec(ctx, query, catIssuerId, catReceiverId); err != nil {
 		return err
 	}
 	return nil
 }
 
-func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string) error {
+func (repository *matchRepositoryImpl) checkCatExists(ctx context.Context, catIssuerId string, catReceiverId string) error {
 	query := `SELECT id FROM cats WHERE id = $1`
-	catIssuer, err := tx.Exec(ctx, query, string(catIssuerId))
+	catIssuer, err := repository.DBPool.Exec(ctx, query, string(catIssuerId))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("Cat Issuer does not exist!")
@@ -234,7 +219,7 @@ func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catRecei
 		return exc.NotFoundException("Cat Issuer does not exist!")
 	}
 
-	catReceiver, err := tx.Exec(ctx, query, string(catReceiverId))
+	catReceiver, err := repository.DBPool.Exec(ctx, query, string(catReceiverId))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return exc.NotFoundException("Cat Receiver does not exist!")
@@ -249,14 +234,14 @@ func checkCatExists(ctx context.Context, tx pgx.Tx, catIssuerId string, catRecei
 	return nil
 }
 
-func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string, catReceiverId string, userId string) error {
+func (repository *matchRepositoryImpl) validateMatchCatCriteria(ctx context.Context, catIssuerId string, catReceiverId string, userId string) error {
 	// check match request already exist or not
 	checkRequestMatchQ := `SELECT EXISTS (SELECT 1 FROM matches m 
 			WHERE (m.cat_issuer_id = $1 AND m.cat_receiver_id = $2 OR m.cat_issuer_id = $2 AND m.cat_receiver_id = $1)
 			AND status = $3
 		)`
 	var isAlreadyRequestMatch bool
-	if err := tx.QueryRow(ctx, checkRequestMatchQ, string(catIssuerId), string(catReceiverId), "requested").Scan(&isAlreadyRequestMatch); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, checkRequestMatchQ, string(catIssuerId), string(catReceiverId), "requested").Scan(&isAlreadyRequestMatch); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 	if isAlreadyRequestMatch {
@@ -266,13 +251,13 @@ func validateMatchCatCriteria(ctx context.Context, tx pgx.Tx, catIssuerId string
 	query := `SELECT sex, has_matched, user_id FROM cats WHERE id = $1`
 	var catIssuerSex, catIssuerUserId string
 	var catIssuerHasMatched bool
-	if err := tx.QueryRow(ctx, query, string(catIssuerId)).Scan(&catIssuerSex, &catIssuerHasMatched, &catIssuerUserId); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, query, string(catIssuerId)).Scan(&catIssuerSex, &catIssuerHasMatched, &catIssuerUserId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
 	var catReceiverSex, catReceiverUserId string
 	var catReceiverHasMatched bool
-	if err := tx.QueryRow(ctx, query, string(catReceiverId)).Scan(&catReceiverSex, &catReceiverHasMatched, &catReceiverUserId); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, query, string(catReceiverId)).Scan(&catReceiverSex, &catReceiverHasMatched, &catReceiverUserId); err != nil {
 		return exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 

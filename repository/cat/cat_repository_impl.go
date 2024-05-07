@@ -10,16 +10,20 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CatRepositoryImpl struct {
+	DBPool *pgxpool.Pool
 }
 
-func NewCatRepository() CatRepository {
-	return &CatRepositoryImpl{}
+func NewCatRepository(dbPool *pgxpool.Pool) CatRepository {
+	return &CatRepositoryImpl{
+		DBPool: dbPool,
+	}
 }
 
-func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat cat_entity.Cat, ownerId string) (cat_entity.Cat, error) {
+func (repository *CatRepositoryImpl) Create(ctx context.Context, cat cat_entity.Cat, ownerId string) (cat_entity.Cat, error) {
 	var catId string
 	var catCreatedAt time.Time
 
@@ -30,8 +34,7 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 		SELECT 1 FROM users WHERE id = CAST($7 as VARCHAR)
 	)
 	RETURNING id, created_at;`
-	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, ownerId).Scan(&catId, &catCreatedAt); err != nil {
-		tx.Rollback(ctx)
+	if err := repository.DBPool.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, ownerId).Scan(&catId, &catCreatedAt); err != nil {
 		return cat_entity.Cat{}, err
 	}
 
@@ -40,14 +43,10 @@ func (repository *CatRepositoryImpl) Create(ctx context.Context, tx pgx.Tx, cat 
 	cat.HasMatched = false
 	cat.CreatedAt = catCreatedAt
 
-	if err := tx.Commit(ctx); err != nil {
-		return cat_entity.Cat{}, err
-	}
-
 	return cat, nil
 }
 
-func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, searchQuery cat_entity.CatSearch) ([]cat_entity.Cat, error) {
+func (repository *CatRepositoryImpl) Search(ctx context.Context, searchQuery cat_entity.CatSearch) ([]cat_entity.Cat, error) {
 	query := `SELECT * FROM cats WHERE is_deleted = false`
 	var whereClause []string
 	params := []interface{}{}
@@ -104,7 +103,7 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 		params = append(params, searchQuery.Offset)
 	}
 
-	rows, err := tx.Query(ctx, query, params...)
+	rows, err := repository.DBPool.Query(ctx, query, params...)
 	if err != nil {
 		return []cat_entity.Cat{}, err
 	}
@@ -117,11 +116,11 @@ func (repository *CatRepositoryImpl) Search(ctx context.Context, tx pgx.Tx, sear
 
 	return cats, nil
 }
-func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat cat_entity.Cat, catId string, ownerId string) (cat_entity.Cat, error) {
+func (repository *CatRepositoryImpl) Edit(ctx context.Context, cat cat_entity.Cat, catId string, ownerId string) (cat_entity.Cat, error) {
 	//  first we check whether the cat is already match(someone request to match) or not(no catfishing, pun intended)
 	var matchCatSex string
 	match_query := `Select cats.sex from matches join cats on cats.id=$1 where cat_issuer_id=$1 or cat_receiver_id=$1 and status!='rejected';`
-	if err := tx.QueryRow(ctx, match_query, catId).Scan(&matchCatSex); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, match_query, catId).Scan(&matchCatSex); err != nil {
 		if err != pgx.ErrNoRows {
 			return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 		}
@@ -136,8 +135,7 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	query := `Update cats set name=$1, race=$2, sex=$3,
 	age_in_month=$4, description=$5, image_urls=$6 where id=$7 and user_id=$8
 	returning id`
-	if err := tx.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, catId, ownerId).Scan(&catId2); err != nil {
-		tx.Rollback(ctx)
+	if err := repository.DBPool.QueryRow(ctx, query, cat.Name, cat.Race, cat.Sex, cat.AgeInMonth, cat.Description, cat.ImageURLs, catId, ownerId).Scan(&catId2); err != nil {
 		return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
 	}
 
@@ -145,26 +143,16 @@ func (repository *CatRepositoryImpl) Edit(ctx context.Context, tx pgx.Tx, cat ca
 	cat.IsDeleted = false
 	cat.HasMatched = false
 
-	if err := tx.Commit(ctx); err != nil {
-		return cat_entity.Cat{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
-	}
-
 	return cat, nil
 }
 
-func (repository *CatRepositoryImpl) Delete(ctx context.Context, tx pgx.Tx, catId string, ownerId string) (cat_entity.Cat, error) {
+func (repository *CatRepositoryImpl) Delete(ctx context.Context, catId string, ownerId string) (cat_entity.Cat, error) {
 	query := `update cats set is_deleted=true where id=$1 and user_id=$2 returning id`
-	if err := tx.QueryRow(ctx, query, catId, ownerId).Scan(&catId); err != nil {
+	if err := repository.DBPool.QueryRow(ctx, query, catId, ownerId).Scan(&catId); err != nil {
 		return cat_entity.Cat{}, err
 	}
 
 	cat := cat_entity.Cat{}
-
 	cat.Id = catId
-
-	if err := tx.Commit(ctx); err != nil {
-		return cat_entity.Cat{}, err
-	}
-
 	return cat, nil
 }
