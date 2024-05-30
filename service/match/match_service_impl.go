@@ -4,26 +4,20 @@ import (
 	match_entity "cats-social/entity/match"
 	exc "cats-social/exceptions"
 	matchRep "cats-social/repository/match"
-	authService "cats-social/service/auth"
 	"fmt"
 
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type matchServiceImpl struct {
 	MatchRepository matchRep.MatchRepository
-	DBPool          *pgxpool.Pool
-	AuthService     authService.AuthService
 	Validator       *validator.Validate
 }
 
-func NewMatchService(matchRepository matchRep.MatchRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) MatchService {
+func NewMatchService(matchRepository matchRep.MatchRepository, validator *validator.Validate) MatchService {
 	return &matchServiceImpl{
 		MatchRepository: matchRepository,
-		DBPool:          dbPool,
-		AuthService:     authService,
 		Validator:       validator,
 	}
 }
@@ -34,23 +28,14 @@ func (service *matchServiceImpl) Create(ctx *fiber.Ctx, req match_entity.MatchCr
 	}
 
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return match_entity.MatchCreateResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return match_entity.MatchCreateResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 	match := match_entity.Match{
 		Message:       req.Message,
 		CatIssuerId:   req.UserCatId,
 		CatReceiverId: req.MatchCatId,
 	}
 
-	matchRegistered, err := matchRep.NewMatchRepository().Create(userCtx, tx, match, userId)
+	matchRegistered, err := service.MatchRepository.Create(userCtx, match, userId)
 	if err != nil {
 		return match_entity.MatchCreateResponse{}, err
 	}
@@ -70,21 +55,12 @@ func (service *matchServiceImpl) Approve(ctx *fiber.Ctx, req match_entity.MatchA
 	}
 
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return match_entity.MatchActionResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return match_entity.MatchActionResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 	match := match_entity.Match{
 		Id: req.MatchId,
 	}
 
-	if err := matchRep.NewMatchRepository().Approve(userCtx, tx, match, userId); err != nil {
+	if err := service.MatchRepository.Approve(userCtx, match, userId); err != nil {
 		return match_entity.MatchActionResponse{}, err
 	}
 
@@ -99,21 +75,12 @@ func (service *matchServiceImpl) Reject(ctx *fiber.Ctx, req match_entity.MatchAc
 	}
 
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return match_entity.MatchActionResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return match_entity.MatchActionResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 	match := match_entity.Match{
 		Id: req.MatchId,
 	}
 
-	if err := matchRep.NewMatchRepository().Reject(userCtx, tx, match, userId); err != nil {
+	if err := service.MatchRepository.Reject(userCtx, match, userId); err != nil {
 		return match_entity.MatchActionResponse{}, err
 	}
 
@@ -124,18 +91,9 @@ func (service *matchServiceImpl) Reject(ctx *fiber.Ctx, req match_entity.MatchAc
 
 func (service *matchServiceImpl) Get(ctx *fiber.Ctx) (match_entity.MatchGetResponse, error) {
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return match_entity.MatchGetResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
+	userId := ctx.Locals("userId").(string)
 
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return match_entity.MatchGetResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
-
-	data, err := matchRep.NewMatchRepository().Get(userCtx, tx, userId)
+	data, err := service.MatchRepository.Get(userCtx, userId)
 	if err != nil {
 		return match_entity.MatchGetResponse{}, err
 	}
@@ -153,20 +111,11 @@ func (service *matchServiceImpl) Delete(ctx *fiber.Ctx, params match_entity.Matc
 	}
 
 	userCtx := ctx.Context()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return match_entity.MatchDeleteResponse{}, exc.InternalServerException(fmt.Sprintf("Internal server error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return match_entity.MatchDeleteResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 	match := match_entity.Match{
 		Id: params.Id,
 	}
-	if err := matchRep.NewMatchRepository().Delete(userCtx, tx, match, userId); err != nil {
+	if err := service.MatchRepository.Delete(userCtx, match, userId); err != nil {
 		return match_entity.MatchDeleteResponse{}, err
 	}
 

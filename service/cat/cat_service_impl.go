@@ -4,7 +4,6 @@ import (
 	cat_entity "cats-social/entity/cat"
 	exc "cats-social/exceptions"
 	catRep "cats-social/repository/cat"
-	authService "cats-social/service/auth"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,21 +11,16 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CatServiceImpl struct {
 	CatRepository catRep.CatRepository
-	DBPool        *pgxpool.Pool
-	AuthService   authService.AuthService
 	Validator     *validator.Validate
 }
 
-func NewCatService(catRepository catRep.CatRepository, dbPool *pgxpool.Pool, authService authService.AuthService, validator *validator.Validate) CatService {
+func NewCatService(catRepository catRep.CatRepository, validator *validator.Validate) CatService {
 	return &CatServiceImpl{
 		CatRepository: catRepository,
-		DBPool:        dbPool,
-		AuthService:   authService,
 		Validator:     validator,
 	}
 }
@@ -37,16 +31,9 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 	}
 
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return cat_entity.CatCreateResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return cat_entity.CatCreateResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	fmt.Println(ctx.Locals("userId"))
+	userId := ctx.Locals("userId").(string)
+	fmt.Println(userId)
 	cat := cat_entity.Cat{
 		Name:        req.Name,
 		Race:        req.Race,
@@ -56,7 +43,7 @@ func (service *CatServiceImpl) Create(ctx *fiber.Ctx, req cat_entity.CatCreateRe
 		ImageURLs:   req.ImageURLs,
 	}
 
-	catRegistered, err := catRep.NewCatRepository().Create(userCtx, tx, cat, userId)
+	catRegistered, err := service.CatRepository.Create(userCtx, cat, userId)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatCreateResponse{}, exc.BadRequestException("Invalid user id")
@@ -80,16 +67,8 @@ func (service *CatServiceImpl) EditCat(ctx *fiber.Ctx, req cat_entity.CatEditReq
 
 	userCtx := ctx.UserContext()
 	catId := ctx.Params("id")
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return cat_entity.CatEditResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(userCtx)
 
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return cat_entity.CatEditResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 	cat := cat_entity.Cat{
 		Name:        req.Name,
 		Race:        req.Race,
@@ -99,7 +78,7 @@ func (service *CatServiceImpl) EditCat(ctx *fiber.Ctx, req cat_entity.CatEditReq
 		ImageURLs:   req.ImageURLs,
 	}
 
-	editedcat, err := catRep.NewCatRepository().Edit(userCtx, tx, cat, catId, userId)
+	editedcat, err := service.CatRepository.Edit(userCtx, cat, catId, userId)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatEditResponse{}, exc.NotFoundException("User/Cat id is not found/match")
@@ -120,16 +99,7 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 	}
 
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(ctx.UserContext())
-	if err != nil {
-		return cat_entity.CatSearchResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
-	defer tx.Rollback(ctx.UserContext())
-
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return cat_entity.CatSearchResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
+	userId := ctx.Locals("userId").(string)
 
 	if strings.ToLower(searchQueries.HasMatched) != "true" && strings.ToLower(searchQueries.HasMatched) != "false" {
 		searchQueries.HasMatched = ""
@@ -171,7 +141,7 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 		cat.Offset, _ = strconv.Atoi(searchQueries.Offset)
 	}
 
-	catSearched, err := catRep.NewCatRepository().Search(userCtx, tx, cat)
+	catSearched, err := service.CatRepository.Search(userCtx, cat)
 	if err != nil {
 		return cat_entity.CatSearchResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
 	}
@@ -201,19 +171,10 @@ func (service *CatServiceImpl) Search(ctx *fiber.Ctx, searchQueries cat_entity.C
 
 func (service *CatServiceImpl) Delete(ctx *fiber.Ctx) (cat_entity.CatDeleteResponse, error) {
 	userCtx := ctx.UserContext()
-	tx, err := service.DBPool.Begin(userCtx)
-	if err != nil {
-		return cat_entity.CatDeleteResponse{}, exc.InternalServerException(fmt.Sprintf("Internal Server Error: %s", err))
-	}
 
-	defer tx.Rollback(ctx.UserContext())
-	userId, err := authService.NewAuthService().GetValidUser(ctx)
-	if err != nil {
-		return cat_entity.CatDeleteResponse{}, exc.UnauthorizedException("Unauthorized")
-	}
-
+	userId := ctx.Locals("userId").(string)
 	catId := ctx.Params("id")
-	deletedCat, err := catRep.NewCatRepository().Delete(userCtx, tx, catId, userId)
+	deletedCat, err := service.CatRepository.Delete(userCtx, catId, userId)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return cat_entity.CatDeleteResponse{}, exc.NotFoundException("Invalid user id")

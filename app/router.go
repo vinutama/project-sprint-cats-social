@@ -6,7 +6,6 @@ import (
 	cat_repository "cats-social/repository/cat"
 	match_repository "cats-social/repository/match"
 	user_repository "cats-social/repository/user"
-	auth_service "cats-social/service/auth"
 	cat_service "cats-social/service/cat"
 	match_service "cats-social/service/match"
 	user_service "cats-social/service/user"
@@ -21,19 +20,17 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	// register custom validator
 	helpers.RegisterCustomValidator(validator)
 
-	authService := auth_service.NewAuthService()
+	userRepository := user_repository.NewUserRepository(dbPool)
+	userService := user_service.NewUserService(userRepository, validator)
+	userController := controller.NewUserController(userService)
 
-	userRepository := user_repository.NewUserRepository()
-	userService := user_service.NewUserService(userRepository, dbPool, authService, validator)
-	userController := controller.NewUserController(userService, authService)
+	catRepository := cat_repository.NewCatRepository(dbPool)
+	catService := cat_service.NewCatService(catRepository, validator)
+	catController := controller.NewCatController(catService)
 
-	catRepository := cat_repository.NewCatRepository()
-	catService := cat_service.NewCatService(catRepository, dbPool, authService, validator)
-	catController := controller.NewCatController(catService, authService)
-
-	matchRepository := match_repository.NewMatchRepository()
-	matchService := match_service.NewMatchService(matchRepository, dbPool, authService, validator)
-	matchController := controller.NewMatchController(matchService, authService)
+	matchRepository := match_repository.NewMatchRepository(dbPool)
+	matchService := match_service.NewMatchService(matchRepository, validator)
+	matchController := controller.NewMatchController(matchService)
 
 	// Users API
 	userApi := app.Group("/v1/user")
@@ -41,7 +38,7 @@ func RegisterBluePrint(app *fiber.App, dbPool *pgxpool.Pool) {
 	userApi.Post("/login", userController.Login)
 
 	// JWT middleware
-	app.Use(helpers.CheckTokenHeader)
+	// app.Use(helpers.CheckTokenHeader)
 	app.Use(helpers.GetTokenHandler())
 
 	// All request below here shoud use Bearer <token>
